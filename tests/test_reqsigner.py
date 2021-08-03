@@ -31,16 +31,18 @@ def teardown_module():
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
 
-def test_invalid_domain(domain):
+def test_invalid_domain(port):
     os.environ["DOMAIN_OVERRIDE"] = "example.com"
+    os.environ["PORT_OVERRIDE"] = port
     with pytest.raises(Exception):
         with TestClient(app) as client:
             pass
 
     #shutil.rmtree(out_dir)
 
-def test_inited(domain):
+def test_inited(domain, port):
     os.environ["DOMAIN_OVERRIDE"] = domain
+    os.environ["PORT_OVERRIDE"] = port
     with TestClient(app) as client:
         res = sorted(os.listdir(out_dir))
         assert res == [

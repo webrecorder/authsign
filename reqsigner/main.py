@@ -25,6 +25,9 @@ def get_config():
     if os.environ.get("DOMAIN_OVERRIDE"):
         data["config"]["domain"] = os.environ.get("DOMAIN_OVERRIDE")
 
+    if os.environ.get("PORT_OVERRIDE"):
+        data["config"]["port"] = int(os.environ.get("PORT_OVERRIDE"))
+
     return data["config"]
 
 

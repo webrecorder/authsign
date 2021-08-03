@@ -1,7 +1,7 @@
 config:
-  domain: test.webrecorder.net  # domain to retrieve a cert for (passed to ACME servers, required)
+  domain: example.com  # domain to retrieve a cert for (passed to ACME servers, required)
   email: test@webrecorder.net  # email for acme auth (passed to ACME servers, required)
-  port: 8000  # local port for acme domain check (should be 80, change if running behind a proxy)
+  port: 80  # local port for acme domain check (should be 80, change if running behind a proxy)
 
   output: ./tests/test-out/  # dir to store the keys and certs (for internal use)
 

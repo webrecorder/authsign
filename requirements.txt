@@ -1,0 +1,8 @@
+cryptography
+rfc3161ng
+pem
+fastapi
+uvicorn
+pyyaml
+pyjwt
+acme
