@@ -1,0 +1,11 @@
+config:
+  domain: test.webrecorder.net  # domain to retrieve a cert for (passed to ACME servers, required)
+  email: test@webrecorder.net  # email for acme auth (passed to ACME servers, required)
+  port: 8000  # local port for acme domain check (should be 80, change if running behind a proxy)
+
+  output: ./tests/test-out/  # dir to store the keys and certs (for internal use)
+
+  staging: True  # generate staging certs
+
+  ts_certfile: ./ts-certs/ts-chain.pem  # time server cert chain (cert + ca cert)
+  ts_url: http://freetsa.org/tsr # timeserver URL
