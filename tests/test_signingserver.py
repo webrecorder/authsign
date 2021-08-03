@@ -8,9 +8,9 @@ import base64
 from fastapi.testclient import TestClient
 
 os.environ["CONFIG"] = os.path.join(os.path.dirname(__file__), "test_config.yaml")
-from reqsigner.main import app
+from signingserver.main import app
 
-import reqsigner.crypto as crypto
+import signingserver.crypto as crypto
 
 logger = logging.getLogger("signer")
 logger.setLevel(logging.DEBUG)
@@ -31,14 +31,12 @@ def teardown_module():
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
 
-def test_invalid_domain(port):
+def _test_invalid_domain(port):
     os.environ["DOMAIN_OVERRIDE"] = "example.com"
     os.environ["PORT_OVERRIDE"] = port
     with pytest.raises(Exception):
         with TestClient(app) as client:
             pass
-
-    #shutil.rmtree(out_dir)
 
 def test_inited(domain, port):
     os.environ["DOMAIN_OVERRIDE"] = domain
