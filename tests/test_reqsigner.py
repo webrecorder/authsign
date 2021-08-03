@@ -28,8 +28,16 @@ def load_file(filename):
 
 
 def teardown_module():
-    shutil.rmtree(out_dir)
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
 
+def test_invalid_domain(domain):
+    os.environ["DOMAIN_OVERRIDE"] = "example.com"
+    with pytest.raises(Exception):
+        with TestClient(app) as client:
+            pass
+
+    #shutil.rmtree(out_dir)
 
 def test_inited(domain):
     os.environ["DOMAIN_OVERRIDE"] = domain
@@ -106,6 +114,14 @@ def test_verify_invalid_wrong_key(domain):
             "ascii"
         )
         req["publicKey"] = crypto.get_public_key_pem(public_key)
+        resp = client.post("/verify", json=req)
+        assert resp.status_code == 400
+
+
+def test_verify_wrong_cert(domain):
+    with TestClient(app) as client:
+        req = signed_req.copy()
+        req["timestampCert"] = req["domainCert"]
         resp = client.post("/verify", json=req)
         assert resp.status_code == 400
 

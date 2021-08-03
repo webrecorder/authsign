@@ -23,23 +23,19 @@ class TimeSigner:
 
         return base64.b64encode(result)
 
-    def verify(self, text, timeSignature, created, delta):
+    def verify(self, text, timeSignature, timestampCert):
         resp = rfc3161ng.decode_timestamp_response(base64.b64decode(timeSignature))
         tst = resp.time_stamp_token
 
         # verify timestamp was signed by the existing cert
         try:
-            if not rfc3161ng.check_timestamp(
+            rfc3161ng.check_timestamp(
                 tst,
-                certificate=self.cert_pem,
+                certificate=timestampCert.encode("ascii"),
                 data=text.encode("ascii"),
                 hashname="sha256",
-            ):
-                return False
+            )
         except Exception as e:
-            return False
+            return None
 
-        # check signature occured within specified delta of creation date
-        timestamp = rfc3161ng.get_timestamp(tst)
-
-        return timestamp - created < delta and timestamp >= created
+        return rfc3161ng.get_timestamp(tst)

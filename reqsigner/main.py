@@ -5,7 +5,7 @@ import yaml
 
 from fastapi import FastAPI, HTTPException, Header
 
-from reqsigner.reqsigner import CertSigner
+from reqsigner.reqsigner import ReqSigner
 from reqsigner.model import SignedHash
 
 from reqsigner.log import debug_message, debug_failure
@@ -32,7 +32,7 @@ def get_config():
 async def startup_event():
     global updater
     debug_message("Startup begin...")
-    updater = CertSigner(**get_config())
+    updater = ReqSigner(**get_config())
     task = loop.create_task(updater.renew_loop(loop))
 
 

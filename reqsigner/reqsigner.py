@@ -28,7 +28,7 @@ CERT_DURATION = datetime.timedelta(hours=12)
 STAMP_DURATION = datetime.timedelta(hours=1)
 
 
-class CertSigner:
+class ReqSigner:
     """ Signing cert, private, public key generator"""
 
     def __init__(
@@ -84,7 +84,7 @@ class CertSigner:
             res = self.update_signing_key_and_cert()
 
         if not res:
-            sys.exit(1)
+            raise Exception("Could not load domain signing cert + keys")
 
         self.long_signature = crypto.sign(self.public_key_pem, self.long_private_key)
 
@@ -124,7 +124,10 @@ class CertSigner:
 
         debug_assert(self.test_keys("Data Signature Test"), "Validating key pair")
 
-        debug_assert(self.is_cert_time_valid(cert, now), "Validating cert still valid")
+        debug_assert(
+            self.is_time_range_valid(cert.not_valid_before, now, CERT_DURATION),
+            "Validating cert still valid",
+        )
 
         self.set_next_update_time(cert)
 
@@ -138,11 +141,8 @@ class CertSigner:
         next_update = (next_update - datetime.datetime.utcnow()).total_seconds()
         self.next_update = next_update
 
-    def is_cert_time_valid(self, cert, thedate):
-        return (
-            cert.not_valid_before < thedate
-            and thedate - cert.not_valid_before < CERT_DURATION
-        )
+    def is_time_range_valid(self, base, thedate, duration):
+        return base <= thedate and thedate - base <= duration
 
     def test_keys(self, data):
         """ Test key pair sign/verify to ensure its valid """
@@ -271,15 +271,23 @@ class CertSigner:
             debug_assert(cert, "Validate certificate chain for domain certificate")
 
             debug_assert(
-                self.is_cert_time_valid(cert, created),
-                "Verify domain certificate was created within one hour of creation date",
+                self.is_time_range_valid(cert.not_valid_before, created, CERT_DURATION),
+                "Verify domain certificate was created within {0} creation date".format(
+                    str(CERT_DURATION)
+                ),
             )
 
+            timestamp = self.timesigner.verify(
+                signed_req.hash, signed_req.timeSignature, signed_req.timestampCert
+            )
+
+            debug_assert(timestamp, "Verify timestamp signature valid")
+
             debug_assert(
-                self.timesigner.verify(
-                    signed_req.hash, signed_req.timeSignature, created, STAMP_DURATION
+                self.is_time_range_valid(created, timestamp, STAMP_DURATION),
+                "Verify time signature created within {0} hour of creation date".format(
+                    str(STAMP_DURATION)
                 ),
-                "Verify timestamp signature and creation within one hour of creation date",
             )
 
             debug_assert(
