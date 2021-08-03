@@ -22,6 +22,9 @@ def get_config():
     with open(configfile, "rt") as fh:
         data = yaml.load(fh.read(), Loader=yaml.SafeLoader)
 
+    if os.environ.get("DOMAIN_OVERRIDE"):
+        data["config"]["domain"] = os.environ.get("DOMAIN_OVERRIDE")
+
     return data["config"]
 
 

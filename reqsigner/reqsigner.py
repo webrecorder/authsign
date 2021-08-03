@@ -17,7 +17,7 @@ from reqsigner.timesigner import TimeSigner
 
 from reqsigner.model import SignedHash
 
-from reqsigner.log import debug_verify, debug_message, debug_failure, debug_success
+from reqsigner.log import debug_assert, debug_message, debug_failure, debug_success
 
 
 PASSPHRASE = b"passphrase"
@@ -122,17 +122,9 @@ class CertSigner:
 
         now = datetime.datetime.utcnow()
 
-        try:
-            debug_verify("Validating key pair")
-            assert self.test_keys("Data Signature Test")
+        debug_assert(self.test_keys("Data Signature Test"), "Validating key pair")
 
-            debug_verify("Validating cert still valid")
-            assert self.is_cert_time_valid(cert, now)
-
-            debug_verify(True)
-        except:
-            debug_verify(False)
-            raise
+        debug_assert(self.is_cert_time_valid(cert, now), "Validating cert still valid")
 
         self.set_next_update_time(cert)
 
@@ -253,19 +245,21 @@ class CertSigner:
         """ Verify signed hash request """
 
         try:
-            debug_verify("Verify signature of hash with public key")
             public_key = crypto.load_public_key(signed_req.publicKey.encode("ascii"))
-            assert crypto.verify(signed_req.hash, signed_req.signature, public_key)
+            debug_assert(
+                crypto.verify(signed_req.hash, signed_req.signature, public_key),
+                "Verify signature of hash with public key",
+            )
 
             if signed_req.longSignature and signed_req.longPublicKey:
-                debug_verify(
-                    "Verify longSignature is a signature of publicKey via longPublicKey"
-                )
                 long_public_key = crypto.load_public_key(
                     signed_req.longPublicKey.encode("ascii")
                 )
-                assert crypto.verify(
-                    signed_req.publicKey, signed_req.longSignature, long_public_key
+                debug_assert(
+                    crypto.verify(
+                        signed_req.publicKey, signed_req.longSignature, long_public_key
+                    ),
+                    "Verify longSignature is a signature of publicKey via longPublicKey",
                 )
 
             created = datetime.datetime.strptime(
@@ -273,30 +267,29 @@ class CertSigner:
             )
 
             # parse each cert in chain and validate signature using the next cert, returning first cert if valid
-            debug_verify("Validate certificate chain for domain certificate")
             cert = crypto.validate_cert_chain(signed_req.domainCert.encode("ascii"))
-            assert cert
+            debug_assert(cert, "Validate certificate chain for domain certificate")
 
-            debug_verify(
-                "Verify domain certificate was created within one hour of creation date"
-            )
-            assert self.is_cert_time_valid(cert, created)
-
-            debug_verify(
-                "Verify timestamp signature and creation within one hour of creation date"
-            )
-            assert self.timesigner.verify(
-                signed_req.hash, signed_req.timeSignature, created, STAMP_DURATION
+            debug_assert(
+                self.is_cert_time_valid(cert, created),
+                "Verify domain certificate was created within one hour of creation date",
             )
 
-            debug_verify("Validate certificate chan for timestamp certificate")
-            assert crypto.validate_cert_chain(signed_req.timestampCert.encode("ascii"))
+            debug_assert(
+                self.timesigner.verify(
+                    signed_req.hash, signed_req.timeSignature, created, STAMP_DURATION
+                ),
+                "Verify timestamp signature and creation within one hour of creation date",
+            )
 
-            debug_verify(True)
+            debug_assert(
+                crypto.validate_cert_chain(signed_req.timestampCert.encode("ascii")),
+                "Validate certificate chain for timestamp certificate",
+            )
+
             return {"domain": crypto.get_cert_subject_name(cert)}
 
         except:
-            debug_verify(False)
             return False
 
     async def renew_loop(self, loop):

@@ -83,6 +83,7 @@ class AcmeSigner:
     def challenge_server(self, http_01_resources):
         """Manage standalone server set up and shutdown."""
 
+        servers = None
         try:
             servers = standalone.HTTP01DualNetworkedServers(
                 ("", self.port), http_01_resources

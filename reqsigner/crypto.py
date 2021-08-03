@@ -3,7 +3,7 @@
 import base64
 
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec, padding
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 from cryptography.hazmat.primitives import hashes
 
 from cryptography.hazmat.backends import default_backend
@@ -92,12 +92,24 @@ def verify(data, signature, public_key):
 def validate_cert(cert, public_key):
     """ Partial validation of cert with issuer cert public key (RSA)"""
     try:
-        public_key.verify(
-            cert.signature,
-            cert.tbs_certificate_bytes,
-            padding.PKCS1v15(),
-            cert.signature_hash_algorithm,
-        )
+        if isinstance(public_key, rsa.RSAPublicKey):
+            public_key.verify(
+                cert.signature,
+                cert.tbs_certificate_bytes,
+                padding.PKCS1v15(),
+                cert.signature_hash_algorithm,
+            )
+        elif isinstance(public_key, ec.EllipticCurvePublicKey):
+            public_key.verify(
+                cert.signature,
+                cert.tbs_certificate_bytes,
+                ec.ECDSA(cert.signature_hash_algorithm),
+            )
+
+        # only supported RSA and ECDSA certs
+        else:
+            return False
+
         return True
     except Exception as e:
         return False
