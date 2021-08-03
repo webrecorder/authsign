@@ -8,37 +8,36 @@ from fastapi import FastAPI, HTTPException, Header
 from certsigner.certsigner import CertSigner
 from certsigner.model import SignedHash
 
+from certsigner.log import debug_message, debug_failure
+
 
 loop = asyncio.get_event_loop()
-
 app = FastAPI()
+updater = None
 
 
 def get_config():
     configfile = os.environ.get("CONFIG", "config.yaml")
+    debug_message("Loading config from: " + configfile)
     with open(configfile, "rt") as fh:
-        data = yaml.load(fh.read())
+        data = yaml.load(fh.read(), Loader=yaml.SafeLoader)
 
-    print(data)
     return data["config"]
 
 
-updater = CertSigner(**get_config())
-
-
-async def updater_loop():
-    while True:
-        await asyncio.sleep(43200)
-        print("Running Cert Update")
-        await loop.run_in_executor(None, updater.update_signing_key_and_cert())
-
-
-task = loop.create_task(updater_loop())
+@app.on_event("startup")
+async def startup_event():
+    global updater
+    debug_message("Startup begin...")
+    updater = CertSigner(**get_config())
+    task = loop.create_task(updater.renew_loop(loop))
 
 
 @app.post("/sign/{data}", response_model=SignedHash)
 async def sign_data(data, authorization: str = Header(None)):
+    debug_message("Signing Request...")
     if not updater.validate_token(authorization):
+        debug_failure("Invalid Auth Token")
         raise HTTPException(status_code=403, detail="Invalid auth token")
 
     return updater.sign_request(data)
@@ -46,6 +45,7 @@ async def sign_data(data, authorization: str = Header(None)):
 
 @app.post("/verify")
 async def verify_data(signed_req: SignedHash):
+    debug_message("Verifying Signed Request...")
     result = await loop.run_in_executor(None, updater.verify_request, signed_req)
     if result:
         return result

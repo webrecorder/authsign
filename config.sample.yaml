@@ -5,7 +5,7 @@ config:
 
   output: ./data  # dir to store the keys and certs (for internal use)
 
-  staging: True  # generate staging certs
+  staging: False  # generate staging certs
 
   ts_certfile: ./ts-certs/ts-chain.pem  # time server cert chain (cert + ca cert)
   ts_url: http://freetsa.org/tsr # timeserver URL

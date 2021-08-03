@@ -86,7 +86,6 @@ def verify(data, signature, public_key):
         public_key.verify(signature, data, ec.ECDSA(hashes.SHA256()))
         return True
     except Exception as e:
-        print("Not Verified", e)
         return False
 
 
@@ -103,12 +102,12 @@ def validate_cert(cert, public_key):
     except Exception as e:
         return False
 
+
 def validate_cert_chain(cert_pem):
     prev_cert = None
     first = None
     for cert in pem.parse(cert_pem):
         cert = load_cert(cert.as_bytes())
-        print(cert)
         if prev_cert:
             if not validate_cert(prev_cert, cert.public_key()):
                 return False
@@ -119,10 +118,10 @@ def validate_cert_chain(cert_pem):
 
     return first
 
+
 def create_jwt(data, pem):
     return jwt.encode(data, pem, algorithm="ES256K")
 
 
 def check_jwt(data, pem):
     return jwt.decode(data, pem, algorithms=["ES256K"])
-
