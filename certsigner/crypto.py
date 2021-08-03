@@ -3,7 +3,7 @@
 import base64
 
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric import ec, padding
 from cryptography.hazmat.primitives import hashes
 
 from cryptography.hazmat.backends import default_backend
@@ -12,6 +12,7 @@ from cryptography import x509
 from cryptography.x509.oid import NameOID
 
 import jwt
+import pem
 
 
 def create_ecdsa_private_key():
@@ -36,6 +37,10 @@ def create_csr(domain, private_key):
 def load_cert(pem):
     """ Load cert from PEM"""
     return x509.load_pem_x509_certificate(pem, backend=default_backend())
+
+
+def get_cert_subject_name(cert):
+    return cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
 
 
 def get_public_key_pem(public_key):
@@ -69,19 +74,50 @@ def load_public_key(pem):
 
 def sign(data, private_key):
     """ Sign with private_key, return base64-encoded DER"""
-    data = private_key.sign(data.encode("utf-8"), ec.ECDSA(hashes.SHA256()))
+    data = private_key.sign(data.encode("ascii"), ec.ECDSA(hashes.SHA256()))
     return base64.b64encode(data).decode("ascii")
 
 
 def verify(data, signature, public_key):
     """ Verify signature (base64-encoded DER) with public key"""
     signature = base64.b64decode(signature)
+    data = data.encode("ascii")
     try:
-        public_key.verify(signature, data.encode("utf-8"), ec.ECDSA(hashes.SHA256()))
+        public_key.verify(signature, data, ec.ECDSA(hashes.SHA256()))
         return True
-    except Exception:
+    except Exception as e:
+        print("Not Verified", e)
         return False
 
+
+def validate_cert(cert, public_key):
+    """ Partial validation of cert with issuer cert public key (RSA)"""
+    try:
+        public_key.verify(
+            cert.signature,
+            cert.tbs_certificate_bytes,
+            padding.PKCS1v15(),
+            cert.signature_hash_algorithm,
+        )
+        return True
+    except Exception as e:
+        return False
+
+def validate_cert_chain(cert_pem):
+    prev_cert = None
+    first = None
+    for cert in pem.parse(cert_pem):
+        cert = load_cert(cert.as_bytes())
+        print(cert)
+        if prev_cert:
+            if not validate_cert(prev_cert, cert.public_key()):
+                return False
+        else:
+            first = cert
+
+        prev_cert = cert
+
+    return first
 
 def create_jwt(data, pem):
     return jwt.encode(data, pem, algorithm="ES256K")
@@ -89,3 +125,4 @@ def create_jwt(data, pem):
 
 def check_jwt(data, pem):
     return jwt.decode(data, pem, algorithms=["ES256K"])
+

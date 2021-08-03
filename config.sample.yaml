@@ -1,12 +1,11 @@
 config:
   domain: <my-domain>  # domain to retrieve a cert for (passed to ACME servers, required)
   email: <my-email>  # email for acme auth (passed to ACME servers, required)
-  port: 80 # local port for acme domain check (should be 80, change if running behind a proxy)
+  port: 80  # local port for acme domain check (should be 80, change if running behind a proxy)
 
   output: ./data  # dir to store the keys and certs (for internal use)
 
   staging: True  # generate staging certs
 
-  ts_cert: ./ts-certs/tsa.crt  # time server cert
+  ts_certfile: ./ts-certs/ts-chain.pem  # time server cert chain (cert + ca cert)
   ts_url: http://freetsa.org/tsr # timeserver URL
-  ts_ca_cert: ./ts-certs/tsa-ca.cert # timestamp CA cert

@@ -3,19 +3,19 @@ Generate Cert and Pub Key via ACME
 """
 from pathlib import Path
 
+import os
 import datetime
 import logging
-import base64
+
+from tempfile import NamedTemporaryFile
 
 import certsigner.crypto as crypto
 
 from certsigner.acme_signer import AcmeSigner
+from certsigner.timesigner import TimeSigner
 
-from pyasn1.codec.der import encoder
-import rfc3161ng
+from certsigner.model import SignedHash
 
-# logger = logging.getLogger("signer")
-# logger.setLevel(logging.INFO)
 logger = logging.getLogger("api")
 
 
@@ -23,11 +23,23 @@ PASSPHRASE = b"passphrase"
 
 AUTH = {"signing": "1"}
 
+CERT_DURATION = datetime.timedelta(hours=12)
+STAMP_DURATION = datetime.timedelta(hours=1)
+
 
 class CertSigner:
     """ Signing cert, private, public key generator"""
 
-    def __init__(self, domain=None, email=None, port=None, staging=True, output=None, ts_cert=None, ts_url=None):
+    def __init__(
+        self,
+        domain=None,
+        email=None,
+        port=None,
+        staging=True,
+        output=None,
+        ts_certfile=None,
+        ts_url=None,
+    ):
         self.domain = domain
         self.email = email
         self.port = port
@@ -47,24 +59,30 @@ class CertSigner:
         self.long_signature = None
         self.long_auth = None
 
-        self.ts_url = ts_url
-        self.ts_cert = ts_cert
-        self.time_stamper = None
-
-    def init_timestamper(self):
-        with open(self.ts_cert, "rb") as fh_in:
-            cert = fh_in.read()
-
-        self.time_stamper = rfc3161ng.RemoteTimestamper(
-            self.ts_url, certificate=cert, hashname="sha256"
+        self.timesigner = TimeSigner(
+            ts_url=ts_url, ts_certfile=ts_certfile
         )
 
-    def timestamp_sign(self, text):
-        tsr = self.time_stamper(data=text.encode("ascii"), return_tsr=True)
+        try:
+            self.load_long()
+        except FileNotFoundError:
+            logger.info("Long-term key not found, creating new long-term key")
+            self.create_long()
 
-        result = encoder.encode(tsr)
+        try:
+            self.load_key_pair_and_cert()
+        except FileNotFoundError:
+            logger.info(
+                "Signing key or cert not found, creating new signing key + cert"
+            )
+            self.update_signing_key_and_cert()
+        except AssertionError:
+            logger.info(
+                "Signing cert expired or not valid, creating new signing key + cert"
+            )
+            self.update_signing_key_and_cert()
 
-        return base64.b64encode(result)
+        self.long_signature = crypto.sign(self.public_key_pem, self.long_private_key)
 
     def validate_token(self, auth_header):
         if not auth_header or not auth_header.startswith("bearer "):
@@ -98,8 +116,12 @@ class CertSigner:
 
         assert self.test_keys("Data Signature Test")
 
-        assert datetime.datetime.now() - cert.not_valid_before < datetime.timedelta(
-            hours=12
+        assert self.is_cert_time_valid(cert, datetime.datetime.utcnow())
+
+    def is_cert_time_valid(self, cert, thedate):
+        return (
+            cert.not_valid_before < thedate
+            and thedate - cert.not_valid_before < CERT_DURATION
         )
 
     def test_keys(self, data):
@@ -147,29 +169,6 @@ class CertSigner:
         with open(self.rootpath / "auth-token.txt", "wt") as fh_out:
             fh_out.write(crypto.create_jwt(AUTH, self.long_private_key))
 
-    def init(self):
-        self.init_timestamper()
-        try:
-            self.load_long()
-        except FileNotFoundError:
-            logger.info("Long-term key not found, creating new long-term key")
-            self.create_long()
-
-        try:
-            self.load_key_pair_and_cert()
-        except FileNotFoundError:
-            logger.info(
-                "Signing key or cert not found, creating new signing key + cert"
-            )
-            self.update_signing_key_and_cert()
-        except AssertionError:
-            logger.info(
-                "Signing cert expired or not valid, creating new signing key + cert"
-            )
-            self.update_signing_key_and_cert()
-
-        self.long_signature = crypto.sign(self.public_key_pem, self.long_private_key)
-
     def update_signing_key_and_cert(self):
         """ Run cert creation"""
         self.private_key = crypto.create_ecdsa_private_key()
@@ -186,16 +185,58 @@ class CertSigner:
 
         self.save_key_pair_and_cert()
 
-    def sign_request(self, data):
-        signature = crypto.sign(data, self.private_key)
+    def sign_request(self, hash_):
+        now = datetime.datetime.utcnow().isoformat()
 
-        timeSignature = self.timestamp_sign(data)
+        signature = crypto.sign(hash_, self.private_key)
 
-        return {
-            "signature": signature,
-            "publicKey": self.public_key_pem,
-            "longSignature": self.long_signature,
-            "longPublicKey": self.long_public_key_pem,
-            "timeSignature": self.timestamp_sign(data),
-            "domainCert": self.cert_pem,
-        }
+        time_signature = self.timesigner.sign(hash_)
+
+        return SignedHash(
+            hash=hash_,
+            date=now,
+            signature=signature,
+            publicKey=self.public_key_pem,
+            timeSignature=time_signature,
+            domainCert=self.cert_pem,
+            timestampCert=self.timesigner.cert_pem,
+            longSignature=self.long_signature,
+            longPublicKey=self.long_public_key_pem,
+        )
+
+    def verify_request(self, signed_req):
+        """ Verify signed hash request """
+
+        # Verify signature of hash with public key
+        public_key = crypto.load_public_key(signed_req.publicKey.encode("ascii"))
+        if not crypto.verify(signed_req.hash, signed_req.signature, public_key):
+            return False
+
+        # ensure longSignature is a signature of publicKey via longPublicKey (if set)
+        if signed_req.longSignature and signed_req.longPublicKey:
+            long_public_key = crypto.load_public_key(signed_req.longPublicKey.encode("ascii"))
+            if not crypto.verify(signed_req.publicKey, signed_req.longSignature, long_public_key):
+                return False
+
+        created = datetime.datetime.strptime(signed_req.date[:19], "%Y-%m-%dT%H:%M:%S")
+
+        cert_pem = signed_req.domainCert.encode("ascii")
+
+        # parse each cert in chain and validate signature using the next cert, returning first cert if valid
+        cert = crypto.validate_cert_chain(cert_pem)
+        if not cert:
+            return False
+
+        # verify cert was created no more than 12 hours before the specified date
+        if not self.is_cert_time_valid(cert, created):
+            return False
+
+        # verify timestamp signature
+        if not self.timesigner.verify(signed_req.hash, signed_req.timeSignature, created, STAMP_DURATION):
+            return False
+
+        # verify timestamp cert
+        if not crypto.validate_cert_chain(signed_req.timestampCert.encode("ascii")):
+            return False
+
+        return {"domain": crypto.get_cert_subject_name(cert)}
