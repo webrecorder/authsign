@@ -10,14 +10,14 @@ import logging
 
 import asyncio
 
-import certsigner.crypto as crypto
+import reqsigner.crypto as crypto
 
-from certsigner.acme_signer import AcmeSigner
-from certsigner.timesigner import TimeSigner
+from reqsigner.acme_signer import AcmeSigner
+from reqsigner.timesigner import TimeSigner
 
-from certsigner.model import SignedHash
+from reqsigner.model import SignedHash
 
-from certsigner.log import debug_verify, debug_message, debug_failure, debug_success
+from reqsigner.log import debug_verify, debug_message, debug_failure, debug_success
 
 
 PASSPHRASE = b"passphrase"

@@ -5,10 +5,10 @@ import yaml
 
 from fastapi import FastAPI, HTTPException, Header
 
-from certsigner.certsigner import CertSigner
-from certsigner.model import SignedHash
+from reqsigner.reqsigner import CertSigner
+from reqsigner.model import SignedHash
 
-from certsigner.log import debug_message, debug_failure
+from reqsigner.log import debug_message, debug_failure
 
 
 loop = asyncio.get_event_loop()

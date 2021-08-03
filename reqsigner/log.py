@@ -1,6 +1,6 @@
 import logging
 
-logger = logging.getLogger("certsigner")
+logger = logging.getLogger("signer")
 
 RESET_SEQ = "\033[0m"
 COLOR_SEQ = "\033[1;%dm"
