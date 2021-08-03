@@ -10,14 +10,14 @@ import logging
 
 import asyncio
 
-import reqsigner.crypto as crypto
+import signingserver.crypto as crypto
 
-from reqsigner.acme_signer import AcmeSigner
-from reqsigner.timesigner import TimeSigner
+from signingserver.acme_signer import AcmeSigner
+from signingserver.timesigner import TimeSigner
 
-from reqsigner.model import SignedHash
+from signingserver.model import SignedHash
 
-from reqsigner.log import debug_assert, debug_message, debug_failure, debug_success
+from signingserver.log import debug_assert, debug_message, debug_failure, debug_success
 
 
 PASSPHRASE = b"passphrase"
@@ -28,7 +28,7 @@ CERT_DURATION = datetime.timedelta(hours=12)
 STAMP_DURATION = datetime.timedelta(hours=1)
 
 
-class ReqSigner:
+class SigningServer:
     """ Signing cert, private, public key generator"""
 
     def __init__(

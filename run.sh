@@ -1,2 +1,2 @@
 #!/bin/sh
-uvicorn reqsigner.main:app --port 8080 --host 0.0.0.0 --log-config log.json
+uvicorn signingserver.main:app --port 8080 --host 0.0.0.0 --log-config log.json

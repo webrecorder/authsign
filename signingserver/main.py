@@ -5,10 +5,10 @@ import yaml
 
 from fastapi import FastAPI, HTTPException, Header
 
-from reqsigner.reqsigner import ReqSigner
-from reqsigner.model import SignedHash
+from signingserver.signingserver import SigningServer
+from signingserver.model import SignedHash
 
-from reqsigner.log import debug_message, debug_failure
+from signingserver.log import debug_message, debug_failure
 
 
 loop = asyncio.get_event_loop()
@@ -35,7 +35,7 @@ def get_config():
 async def startup_event():
     global updater
     debug_message("Startup begin...")
-    updater = ReqSigner(**get_config())
+    updater = SigningServer(**get_config())
     task = loop.create_task(updater.renew_loop(loop))
 
 
