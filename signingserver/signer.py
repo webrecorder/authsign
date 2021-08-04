@@ -116,11 +116,6 @@ class SigningServer:
         self.public_key = cert.public_key()
         self.public_key_pem = crypto.get_public_key_pem(self.public_key)
 
-        debug_message("Loading: " + str(self.rootpath / "public-key.pem"))
-        with open(self.rootpath / "public-key.pem", "rt") as fh_in:
-            data = fh_in.read()
-            assert data == self.public_key_pem
-
         debug_message("Loading: " + str(self.rootpath / "private-key.pem"))
         with open(self.rootpath / "private-key.pem", "rb") as fh_in:
             data = fh_in.read()
@@ -157,10 +152,6 @@ class SigningServer:
         debug_message("Saving: " + str(self.rootpath / "private-key.pem"))
         with open(self.rootpath / "private-key.pem", "wb") as fh_out:
             fh_out.write(crypto.save_private_key(self.private_key, PASSPHRASE))
-
-        debug_message("Saving: " + str(self.rootpath / "public-key.pem"))
-        with open(self.rootpath / "public-key.pem", "wt") as fh_out:
-            fh_out.write(self.public_key_pem)
 
         debug_message("Saving: " + str(self.rootpath / "cert.pem"))
         with open(self.rootpath / "cert.pem", "wt") as fh_out:

@@ -55,7 +55,6 @@ def test_inited(domain, port, keep):
             "long-private-key.pem",
             "long-public-key.pem",
             "private-key.pem",
-            "public-key.pem",
         ]
 
         global cert_pem
