@@ -5,7 +5,8 @@ import yaml
 
 from fastapi import FastAPI, HTTPException, Header
 
-from signingserver.signingserver import SigningServer
+from signingserver.signer import SigningServer
+from signingserver.verifier import verify_request
 from signingserver.model import SignedHash
 
 from signingserver.log import debug_message, debug_failure
@@ -52,7 +53,7 @@ async def sign_data(data, authorization: str = Header(None)):
 @app.post("/verify")
 async def verify_data(signed_req: SignedHash):
     debug_message("Verifying Signed Request...")
-    result = await loop.run_in_executor(None, updater.verify_request, signed_req)
+    result = await loop.run_in_executor(None, verify_request, signed_req)
     if result:
         return result
 

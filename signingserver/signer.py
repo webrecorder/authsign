@@ -3,19 +3,19 @@ Generate Cert and Pub Key via ACME
 """
 from pathlib import Path
 
-import sys
-import os
 import datetime
-import logging
-
+import base64
 import asyncio
+
+from pyasn1.codec.der import encoder
+import rfc3161ng
 
 import signingserver.crypto as crypto
 
 from signingserver.acme_signer import AcmeSigner
-from signingserver.timesigner import TimeSigner
 
-from signingserver.model import SignedHash
+from signingserver.model import SignedHash, CERT_DURATION, is_time_range_valid
+
 
 from signingserver.log import debug_assert, debug_message, debug_failure, debug_success
 
@@ -24,10 +24,8 @@ PASSPHRASE = b"passphrase"
 
 AUTH = {"signing": "1"}
 
-CERT_DURATION = datetime.timedelta(hours=12)
-STAMP_DURATION = datetime.timedelta(hours=1)
 
-
+# ============================================================================
 class SigningServer:
     """ Signing cert, private, public key generator"""
 
@@ -60,7 +58,7 @@ class SigningServer:
         self.long_signature = None
         self.long_auth = None
 
-        self.timesigner = TimeSigner(ts_url=ts_url, ts_certfile=ts_certfile)
+        self.next_update = 0
 
         try:
             self.load_long()
@@ -87,6 +85,14 @@ class SigningServer:
             raise Exception("Could not load domain signing cert + keys")
 
         self.long_signature = crypto.sign(self.public_key_pem, self.long_private_key)
+
+        self.timestamp_cert_pem = None
+        with open(ts_certfile, "rb") as fh_in:
+            self.timestamp_cert_pem = fh_in.read()
+
+        self.timestamper = rfc3161ng.RemoteTimestamper(
+            ts_url, certificate=self.timestamp_cert_pem, hashname="sha256"
+        )
 
     def validate_token(self, auth_header):
         if not auth_header or not auth_header.startswith("bearer "):
@@ -125,7 +131,7 @@ class SigningServer:
         debug_assert(self.test_keys("Data Signature Test"), "Validating key pair")
 
         debug_assert(
-            self.is_time_range_valid(cert.not_valid_before, now, CERT_DURATION),
+            is_time_range_valid(cert.not_valid_before, now, CERT_DURATION),
             "Validating cert still valid",
         )
 
@@ -140,9 +146,6 @@ class SigningServer:
         )
         next_update = (next_update - datetime.datetime.utcnow()).total_seconds()
         self.next_update = next_update
-
-    def is_time_range_valid(self, base, thedate, duration):
-        return base <= thedate and thedate - base <= duration
 
     def test_keys(self, data):
         """ Test key pair sign/verify to ensure its valid """
@@ -222,83 +225,31 @@ class SigningServer:
         self.set_next_update_time(crypto.load_cert(self.cert_pem.encode("ascii")))
         return True
 
+    def timestamp_sign(self, text):
+        tsr = self.timestamper(data=text.encode("ascii"), return_tsr=True)
+
+        result = encoder.encode(tsr)
+
+        return base64.b64encode(result)
+
     def sign_request(self, hash_):
         now = datetime.datetime.utcnow().isoformat()
 
         signature = crypto.sign(hash_, self.private_key)
 
-        time_signature = self.timesigner.sign(hash_)
+        time_signature = self.timestamp_sign(signature)
 
         return SignedHash(
             hash=hash_,
             date=now,
             signature=signature,
-            publicKey=self.public_key_pem,
+            # publicKey=self.public_key_pem,
             timeSignature=time_signature,
             domainCert=self.cert_pem,
-            timestampCert=self.timesigner.cert_pem,
+            timestampCert=self.timestamp_cert_pem,
             longSignature=self.long_signature,
             longPublicKey=self.long_public_key_pem,
         )
-
-    def verify_request(self, signed_req):
-        """ Verify signed hash request """
-
-        try:
-            public_key = crypto.load_public_key(signed_req.publicKey.encode("ascii"))
-            debug_assert(
-                crypto.verify(signed_req.hash, signed_req.signature, public_key),
-                "Verify signature of hash with public key",
-            )
-
-            if signed_req.longSignature and signed_req.longPublicKey:
-                long_public_key = crypto.load_public_key(
-                    signed_req.longPublicKey.encode("ascii")
-                )
-                debug_assert(
-                    crypto.verify(
-                        signed_req.publicKey, signed_req.longSignature, long_public_key
-                    ),
-                    "Verify longSignature is a signature of publicKey via longPublicKey",
-                )
-
-            created = datetime.datetime.strptime(
-                signed_req.date[:19], "%Y-%m-%dT%H:%M:%S"
-            )
-
-            # parse each cert in chain and validate signature using the next cert, returning first cert if valid
-            cert = crypto.validate_cert_chain(signed_req.domainCert.encode("ascii"))
-            debug_assert(cert, "Validate certificate chain for domain certificate")
-
-            debug_assert(
-                self.is_time_range_valid(cert.not_valid_before, created, CERT_DURATION),
-                "Verify domain certificate was created within {0} creation date".format(
-                    str(CERT_DURATION)
-                ),
-            )
-
-            timestamp = self.timesigner.verify(
-                signed_req.hash, signed_req.timeSignature, signed_req.timestampCert
-            )
-
-            debug_assert(timestamp, "Verify timestamp signature valid")
-
-            debug_assert(
-                self.is_time_range_valid(created, timestamp, STAMP_DURATION),
-                "Verify time signature created within {0} hour of creation date".format(
-                    str(STAMP_DURATION)
-                ),
-            )
-
-            debug_assert(
-                crypto.validate_cert_chain(signed_req.timestampCert.encode("ascii")),
-                "Validate certificate chain for timestamp certificate",
-            )
-
-            return {"domain": crypto.get_cert_subject_name(cert)}
-
-        except:
-            return False
 
     async def renew_loop(self, loop):
         debug_message(

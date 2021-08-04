@@ -1,6 +1,7 @@
 """ crypto utils"""
 
 import base64
+import binascii
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
@@ -41,6 +42,10 @@ def load_cert(pem):
 
 def get_cert_subject_name(cert):
     return cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+
+
+def get_fingerprint(cert):
+    return binascii.b2a_hex(cert.fingerprint(hashes.SHA256())).decode("ascii")
 
 
 def get_public_key_pem(public_key):

@@ -20,6 +20,7 @@ out_dir = os.path.join(os.path.dirname(__file__), "test-out")
 cert_pem = None
 auth_token = None
 signed_req = None
+keep_data = False
 
 
 def load_file(filename):
@@ -28,17 +29,22 @@ def load_file(filename):
 
 
 def teardown_module():
-    if os.path.exists(out_dir):
+    if not keep_data and os.path.exists(out_dir):
         shutil.rmtree(out_dir)
 
+
 def test_invalid_domain(port):
+    if os.path.exists(out_dir):
+        pytest.skip("reusing existing cert, skip invalid domain check")
+
     os.environ["DOMAIN_OVERRIDE"] = "example.com"
     os.environ["PORT_OVERRIDE"] = port
     with pytest.raises(Exception):
         with TestClient(app) as client:
             pass
 
-def test_inited(domain, port):
+
+def test_inited(domain, port, keep):
     os.environ["DOMAIN_OVERRIDE"] = domain
     os.environ["PORT_OVERRIDE"] = port
     with TestClient(app) as client:
@@ -57,6 +63,10 @@ def test_inited(domain, port):
 
         global auth_token
         auth_token = load_file("auth-token.txt")
+
+        if keep:
+            global keep_data
+            keep_data = True
 
 
 def test_reload_same_cert(domain):
@@ -110,10 +120,7 @@ def test_verify_invalid_wrong_key(domain):
     public_key = private_key.public_key()
     with TestClient(app) as client:
         req = signed_req.copy()
-        req["privateKey"] = crypto.save_private_key(private_key, b"passphrase").decode(
-            "ascii"
-        )
-        req["publicKey"] = crypto.get_public_key_pem(public_key)
+        req["longPublicKey"] = crypto.get_public_key_pem(public_key)
         resp = client.post("/verify", json=req)
         assert resp.status_code == 400
 
