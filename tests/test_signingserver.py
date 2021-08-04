@@ -137,6 +137,14 @@ def test_verify_invalid_bad_date(domain):
     with TestClient(app) as client:
         # date to early
         req = signed_req.copy()
+        req["date"] = "abc"
+        resp = client.post("/verify", json=req)
+        assert resp.status_code == 400
+
+def test_verify_invalid_date_out_of_range(domain):
+    with TestClient(app) as client:
+        # date to early
+        req = signed_req.copy()
         req["date"] = (
             datetime.datetime.utcnow() - datetime.timedelta(days=1)
         ).isoformat()

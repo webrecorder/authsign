@@ -233,7 +233,9 @@ class SigningServer:
         return base64.b64encode(result)
 
     def sign_request(self, hash_):
-        now = datetime.datetime.utcnow().isoformat()
+        now = datetime.datetime.utcnow().strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
 
         signature = crypto.sign(hash_, self.private_key)
 

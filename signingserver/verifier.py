@@ -58,7 +58,8 @@ def verify_request(signed_req):
                 "Verify longSignature is a signature of public key via longPublicKey",
             )
 
-        created = datetime.datetime.strptime(signed_req.date[:19], "%Y-%m-%dT%H:%M:%S")
+        created = parse_date(signed_req.date)
+        debug_assert(created, "Parsed signature date")
 
         debug_assert(
             is_time_range_valid(cert.not_valid_before, created, CERT_DURATION),
@@ -97,3 +98,10 @@ def verify_request(signed_req):
 
     except:
         return False
+
+def parse_date(date):
+    try:
+        return datetime.datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
+    except:
+        return None
+
