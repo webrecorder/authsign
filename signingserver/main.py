@@ -5,8 +5,8 @@ import yaml
 
 from fastapi import FastAPI, HTTPException, Header
 
-from signingserver.signer import SigningServer
-from signingserver.verifier import verify_request
+from signingserver.signer import Signer
+from signingserver.verifier import Verifier
 from signingserver.model import SignedHash
 
 from signingserver.log import debug_message, debug_failure
@@ -14,12 +14,13 @@ from signingserver.log import debug_message, debug_failure
 
 loop = asyncio.get_event_loop()
 app = FastAPI()
-updater = None
 
+signer = None
+verifier = None
 
-def get_config():
+def get_signing_config():
     configfile = os.environ.get("CONFIG", "config.yaml")
-    debug_message("Loading config from: " + configfile)
+    debug_message("Loading signing config from: " + configfile)
     with open(configfile, "rt") as fh:
         data = yaml.load(fh.read(), Loader=yaml.SafeLoader)
 
@@ -32,28 +33,42 @@ def get_config():
     return data["config"]
 
 
+def get_verifier_config():
+    configfile = os.environ.get("TRUST_CONFIG", "trusted.yaml")
+    debug_message("Loading verification trust config from: " + configfile)
+    with open(configfile, "rt") as fh:
+        data = yaml.load(fh.read(), Loader=yaml.SafeLoader)
+
+    return data
+
+
 @app.on_event("startup")
 async def startup_event():
-    global updater
+    global signer
     debug_message("Startup begin...")
-    updater = SigningServer(**get_config())
-    task = loop.create_task(updater.renew_loop(loop))
+    signer = Signer(**get_signing_config())
+
+    if not os.environ.get("NO_RENEW"):
+        asyncio.ensure_future(signer.renew_loop())
+
+    global verifier
+    verifier = Verifier(get_verifier_config())
 
 
 @app.post("/sign/{data}", response_model=SignedHash)
 async def sign_data(data, authorization: str = Header(None)):
     debug_message("Signing Request...")
-    if not updater.validate_token(authorization):
+    if not signer.validate_token(authorization):
         debug_failure("Invalid Auth Token")
         raise HTTPException(status_code=403, detail="Invalid auth token")
 
-    return updater.sign_request(data)
+    return signer.sign_request(data)
 
 
 @app.post("/verify")
 async def verify_data(signed_req: SignedHash):
     debug_message("Verifying Signed Request...")
-    result = await loop.run_in_executor(None, verify_request, signed_req)
+    result = await loop.run_in_executor(None, verifier.verify_request, signed_req)
     if result:
         return result
 

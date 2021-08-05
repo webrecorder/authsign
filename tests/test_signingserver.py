@@ -4,11 +4,22 @@ import shutil
 import logging
 import datetime
 import base64
+import asyncio
 
 from fastapi.testclient import TestClient
 
 os.environ["CONFIG"] = os.path.join(os.path.dirname(__file__), "test_config.yaml")
-from signingserver.main import app
+os.environ["TRUST_CONFIG"] = os.path.join(os.path.dirname(__file__), "test_trusted.yaml")
+os.environ["NO_RENEW"] = "1"
+
+
+import signingserver.main
+
+app = signingserver.main.app
+
+from signingserver import signer
+
+from signingserver.model import format_date
 
 import signingserver.crypto as crypto
 
@@ -39,6 +50,7 @@ def test_invalid_domain(port):
 
     os.environ["DOMAIN_OVERRIDE"] = "example.com"
     os.environ["PORT_OVERRIDE"] = port
+    os.environ["NO_RENEW"] = "1"
     with pytest.raises(Exception):
         with TestClient(app) as client:
             pass
@@ -47,6 +59,7 @@ def test_invalid_domain(port):
 def test_inited(domain, port, keep):
     os.environ["DOMAIN_OVERRIDE"] = domain
     os.environ["PORT_OVERRIDE"] = port
+    os.environ["NO_RENEW"] = "1"
     with TestClient(app) as client:
         res = sorted(os.listdir(out_dir))
         assert res == [
@@ -144,17 +157,17 @@ def test_verify_invalid_date_out_of_range(domain):
     with TestClient(app) as client:
         # date to early
         req = signed_req.copy()
-        req["date"] = (
+        req["date"] = format_date(
             datetime.datetime.utcnow() - datetime.timedelta(days=1)
-        ).isoformat()
+        )
         resp = client.post("/verify", json=req)
         assert resp.status_code == 400
 
         # date to late
         req = signed_req.copy()
-        req["date"] = (
+        req["date"] = format_date(
             datetime.datetime.utcnow() + datetime.timedelta(days=1)
-        ).isoformat()
+        )
         resp = client.post("/verify", json=req)
         assert resp.status_code == 400
 
@@ -164,3 +177,20 @@ def test_verify_valid(domain):
         resp = client.post("/verify", json=signed_req)
         assert resp.status_code == 200
         assert resp.json() == {"domain": domain}
+
+
+@pytest.mark.asyncio
+async def test_renew_cert(domain):
+    orig_cert_pem = cert_pem
+
+    signingserver.main.signer.next_update = 5
+    asyncio.ensure_future(signingserver.main.signer.renew_loop())
+
+    await asyncio.sleep(7)
+
+    while signer.renewing:
+        await asyncio.sleep(0.5)
+
+    new_cert_pem = load_file("cert.pem")
+
+    assert new_cert_pem != orig_cert_pem

@@ -1,0 +1,20 @@
+
+# fingerprints (sha-256) of trusted domain and timestamp root certificates
+
+
+domain_cert_roots:
+  # Lets Encrypt Root CA X3 
+  - 6d99fb265eb1c5b3744765fcbc648f3cd8e1bffafdc4c2f99b9d47cf7ff1c24f
+
+  # staging -- disabled for production
+  # Lets Encrypt Staging (Pretend Pear X1)
+  #- e70570a989f8565aabdf7cae27abd1621872d6a3f811e3fef27e3dba02912198
+
+  # Lets Encrypt Staging (Bogus Broccoli X2)
+  #- 32d21af6fc87417a55d7e23c6992b8ce0cb9b5fcd85da30d194156d53758e4c5
+
+timestamp_cert_roots:
+  # freetsa.org Root CA (self-signed)
+  - a6379e7cecc05faa3cbf076013d745e327bbbaa38c0b9af22469d4701d18aabc
+
+

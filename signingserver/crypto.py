@@ -41,10 +41,12 @@ def load_cert(pem):
 
 
 def get_cert_subject_name(cert):
+    """ Get the subject name (domain) from a cert"""
     return cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
 
 
 def get_fingerprint(cert):
+    """ Get the cert fingerprint as SHA-256 hex string"""
     return binascii.b2a_hex(cert.fingerprint(hashes.SHA256())).decode("ascii")
 
 
@@ -95,7 +97,9 @@ def verify(data, signature, public_key):
 
 
 def validate_cert(cert, public_key):
-    """ Partial validation of cert with issuer cert public key (RSA)"""
+    """ Validation of cert with issuer cert public key (RSA or ECDSA ony)
+        Does not necessarily imply cert is truested
+    """
     try:
         if isinstance(public_key, rsa.RSAPublicKey):
             public_key.verify(
@@ -121,19 +125,21 @@ def validate_cert(cert, public_key):
 
 
 def validate_cert_chain(cert_pem):
+    """ Validate a cert chain stored in PEM file. Each cert is validated with key of next cert in PEM file
+        Return parsed certs
+    """
     prev_cert = None
-    first = None
+    certs = []
     for cert in pem.parse(cert_pem):
         cert = load_cert(cert.as_bytes())
+        certs.append(cert)
         if prev_cert:
             if not validate_cert(prev_cert, cert.public_key()):
                 return False
-        else:
-            first = cert
 
         prev_cert = cert
 
-    return first
+    return certs
 
 
 def create_jwt(data, pem):

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import datetime
 import base64
+import random
 import asyncio
 
 from pyasn1.codec.der import encoder
@@ -14,8 +15,7 @@ import signingserver.crypto as crypto
 
 from signingserver.acme_signer import AcmeSigner
 
-from signingserver.model import SignedHash, CERT_DURATION, is_time_range_valid
-
+from signingserver.model import SignedHash, CERT_DURATION, is_time_range_valid, format_date
 
 from signingserver.log import debug_assert, debug_message, debug_failure, debug_success
 
@@ -24,9 +24,30 @@ PASSPHRASE = b"passphrase"
 
 AUTH = {"signing": "1"}
 
+renewing = False
+
 
 # ============================================================================
-class SigningServer:
+class Timestamper:
+    def __init__(self, certfile=None, url=None):
+        self.cert_pem = None
+        with open(certfile, "rb") as fh_in:
+            self.cert_pem = fh_in.read()
+
+        self._timestamper = rfc3161ng.RemoteTimestamper(
+            url, certificate=self.cert_pem, hashname="sha256"
+        )
+
+    def sign(self, text):
+        tsr = self._timestamper(data=text.encode("ascii"), return_tsr=True)
+
+        result = encoder.encode(tsr)
+
+        return base64.b64encode(result)
+
+
+# ============================================================================
+class Signer:
     """ Signing cert, private, public key generator"""
 
     def __init__(
@@ -36,8 +57,7 @@ class SigningServer:
         port=None,
         staging=True,
         output=None,
-        ts_certfile=None,
-        ts_url=None,
+        timestamping=None
     ):
         self.domain = domain
         self.email = email
@@ -86,13 +106,7 @@ class SigningServer:
 
         self.long_signature = crypto.sign(self.public_key_pem, self.long_private_key)
 
-        self.timestamp_cert_pem = None
-        with open(ts_certfile, "rb") as fh_in:
-            self.timestamp_cert_pem = fh_in.read()
-
-        self.timestamper = rfc3161ng.RemoteTimestamper(
-            ts_url, certificate=self.timestamp_cert_pem, hashname="sha256"
-        )
+        self.timestampers = [Timestamper(**ts_data) for ts_data in timestamping]
 
     def validate_token(self, auth_header):
         if not auth_header or not auth_header.startswith("bearer "):
@@ -216,21 +230,14 @@ class SigningServer:
         self.set_next_update_time(crypto.load_cert(self.cert_pem.encode("ascii")))
         return True
 
-    def timestamp_sign(self, text):
-        tsr = self.timestamper(data=text.encode("ascii"), return_tsr=True)
-
-        result = encoder.encode(tsr)
-
-        return base64.b64encode(result)
-
     def sign_request(self, hash_):
-        now = datetime.datetime.utcnow().strftime(
-            "%Y-%m-%dT%H:%M:%SZ"
-        )
+        now = format_date(datetime.datetime.utcnow())
 
         signature = crypto.sign(hash_, self.private_key)
 
-        time_signature = self.timestamp_sign(signature)
+        timestamper = random.choice(self.timestampers)
+
+        time_signature = timestamper.sign(signature)
 
         return SignedHash(
             hash=hash_,
@@ -239,20 +246,24 @@ class SigningServer:
             # publicKey=self.public_key_pem,
             timeSignature=time_signature,
             domainCert=self.cert_pem,
-            timestampCert=self.timestamp_cert_pem,
+            timestampCert=timestamper.cert_pem,
             longSignature=self.long_signature,
             longPublicKey=self.long_public_key_pem,
         )
 
-    async def renew_loop(self, loop):
+    async def renew_loop(self):
         debug_message(
-            "Renewing domain certificate in {0} seconds".format(self.next_update)
+            "Renewing domain certificate in {0}".format(datetime.timedelta(seconds=self.next_update))
         )
+        loop = asyncio.get_event_loop()
         await asyncio.sleep(self.next_update)
         update_time = CERT_DURATION.total_seconds()
+        global renewing
 
         while True:
             debug_message("Running domain certificate update...")
-            await loop.run_in_executor(None, self.update_signing_key_and_cert())
-            debug_message("Done, next update in {0} seconds".format(update_time))
+            renewing = True
+            await loop.run_in_executor(None, self.update_signing_key_and_cert)
+            debug_message("Done, next update in {0}".format(datetime.timedelta(seconds=update_time)))
+            renewing = False
             await asyncio.sleep(update_time)

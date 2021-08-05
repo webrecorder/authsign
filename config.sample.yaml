@@ -7,5 +7,8 @@ config:
 
   staging: False  # generate staging certs
 
-  ts_certfile: ./ts-certs/ts-chain.pem  # time server cert chain (cert + ca cert)
-  ts_url: http://freetsa.org/tsr # timeserver URL
+  # rfc3161 timestamp authority cert chain + timestamp urls
+  # at least one required, if multiple, one is selected at random
+  timestamping:
+    - certfile: ./ts-certs/ts-chain.pem # time server cert chain (cert + ca cert)
+      url: http://freetsa.org/tsr  # timeserver URL
