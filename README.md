@@ -1,4 +1,4 @@
-# Request Signer + Verifier
+# AuthSigner: Signing Server + Verifier
 
 This system provides a signing + verifying server that can sign an arbitrary data passed in via `/sign/<data>`, as well as verify the request POST to `/verify`.
 
@@ -50,10 +50,10 @@ The verification checks include:
 
 ### Trusted Roots
 
-To indicate the trusted domain and timestamp certs, the `trusted.yaml` file includes the fingerprints (sha-256 hashes) of valid roots.
+To indicate the trusted domain and timestamp certs, the `authsigner/trusted/roots.yaml` file includes the fingerprints (sha-256 hashes) of valid roots.
 Currently, this includes the Lets Encrypt CA root and the root for the timestamping server (freetsa.org)
 
-Additional trusted roots can beadded as needed.
+Additional trusted roots can be added as needed. A different trusted roots yaml can be specified in the YAML config as well (see config.sample.yaml for more info)
 
 
 ## Certificate Generation

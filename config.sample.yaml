@@ -1,4 +1,4 @@
-config:
+signing:
   domain: <my-domain>  # domain to retrieve a cert for (passed to ACME servers, required)
   email: <my-email>  # email for acme auth (passed to ACME servers, required)
   port: 80  # local port for acme domain check (should be 80, change if running behind a proxy)
@@ -10,5 +10,13 @@ config:
   # rfc3161 timestamp authority cert chain + timestamp urls
   # at least one required, if multiple, one is selected at random
   timestamping:
-    - certfile: ./ts-certs/ts-chain.pem # time server cert chain (cert + ca cert)
+    # time server cert chain (cert + ca cert)
+    # pkg:// url to load from python package data
+    - certfile: pkg://authsign.trusted/ts-chain.pem
       url: http://freetsa.org/tsr  # timeserver URL
+
+
+# default trusted roots stored in authsign.trusted package
+# uncomment to override
+# trusted_roots: pkg://authsign.trusted/roots.yaml
+
