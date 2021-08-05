@@ -31,7 +31,7 @@ setup(
     ],
     test_requires=["pytest", "pytest-asyncio"],
     zip_safe=True,
-    package_data={"authsign": ["trusted.yaml", "ts-certs/*"]},
+    package_data={"authsign.trusted": ["*"]},
     data_files={
         "requirements.txt": "requirements.txt",
         "log.json": "log.json",

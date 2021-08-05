@@ -18,7 +18,7 @@ from authsign.acme_signer import AcmeSigner
 from authsign.model import SignedHash
 from authsign.utils import CERT_DURATION, is_time_range_valid, format_date, open_file
 
-from authsign.log import debug_assert, debug_message, debug_failure, debug_success
+from authsign.log import log_assert, log_message, log_failure, log_success
 
 
 PASSPHRASE = b"passphrase"
@@ -84,7 +84,7 @@ class Signer:
         try:
             self.load_long()
         except FileNotFoundError:
-            debug_message("Long-term key not found, creating new long-term key")
+            log_message("Long-term key not found, creating new long-term key")
             self.create_long()
 
         res = False
@@ -92,12 +92,12 @@ class Signer:
             self.load_key_pair_and_cert()
             res = True
         except FileNotFoundError:
-            debug_message(
+            log_message(
                 "Signing key or cert not found, creating new signing key + cert"
             )
             res = self.update_signing_key_and_cert()
         except AssertionError:
-            debug_message(
+            log_message(
                 "Signing cert expired or not valid, creating new signing key + cert"
             )
             res = self.update_signing_key_and_cert()
@@ -123,7 +123,7 @@ class Signer:
     def load_key_pair_and_cert(self):
         """Load key pair and cert"""
         cert = None
-        debug_message("Loading: " + str(self.rootpath / "cert.pem"))
+        log_message("Loading: " + str(self.rootpath / "cert.pem"))
         with open(self.rootpath / "cert.pem", "rb") as fh_in:
             self.cert_pem = fh_in.read()
             cert = crypto.load_cert(self.cert_pem)
@@ -131,16 +131,16 @@ class Signer:
         self.public_key = cert.public_key()
         self.public_key_pem = crypto.get_public_key_pem(self.public_key)
 
-        debug_message("Loading: " + str(self.rootpath / "private-key.pem"))
+        log_message("Loading: " + str(self.rootpath / "private-key.pem"))
         with open(self.rootpath / "private-key.pem", "rb") as fh_in:
             data = fh_in.read()
             self.private_key = crypto.load_private_key(data, PASSPHRASE)
 
         now = datetime.datetime.utcnow()
 
-        debug_assert(self.test_keys("Data Signature Test"), "Validating key pair")
+        log_assert(self.test_keys("Data Signature Test"), "Validating key pair")
 
-        debug_assert(
+        log_assert(
             is_time_range_valid(cert.not_valid_before, now, CERT_DURATION),
             "Validating cert still valid",
         )
@@ -149,7 +149,7 @@ class Signer:
 
     def set_next_update_time(self, cert):
         next_update = cert.not_valid_before + CERT_DURATION
-        debug_message(
+        log_message(
             "Certificate will be used from {0} to {1}".format(
                 cert.not_valid_before, next_update
             )
@@ -164,23 +164,23 @@ class Signer:
 
     def save_key_pair_and_cert(self):
         """Save keypair and cert"""
-        debug_message("Saving: " + str(self.rootpath / "private-key.pem"))
+        log_message("Saving: " + str(self.rootpath / "private-key.pem"))
         with open(self.rootpath / "private-key.pem", "wb") as fh_out:
             fh_out.write(crypto.save_private_key(self.private_key, PASSPHRASE))
 
-        debug_message("Saving: " + str(self.rootpath / "cert.pem"))
+        log_message("Saving: " + str(self.rootpath / "cert.pem"))
         with open(self.rootpath / "cert.pem", "wt") as fh_out:
             fh_out.write(self.cert_pem)
 
     def load_long(self):
         """Load long-term key pair"""
-        debug_message("Loading: " + str(self.rootpath / "long-public-key.pem"))
+        log_message("Loading: " + str(self.rootpath / "long-public-key.pem"))
         with open(self.rootpath / "long-public-key.pem", "rb") as fh_in:
             data = fh_in.read()
             self.long_public_key = crypto.load_public_key(data)
             self.long_public_key_pem = crypto.get_public_key_pem(self.long_public_key)
 
-        debug_message("Loading: " + str(self.rootpath / "long-private-key.pem"))
+        log_message("Loading: " + str(self.rootpath / "long-private-key.pem"))
         with open(self.rootpath / "long-private-key.pem", "rb") as fh_in:
             data = fh_in.read()
             self.long_private_key = crypto.load_private_key(data, PASSPHRASE)
@@ -191,18 +191,18 @@ class Signer:
 
         self.long_private_key = crypto.create_ecdsa_private_key()
 
-        debug_message("Saving: " + str(self.rootpath / "long-private-key.pem"))
+        log_message("Saving: " + str(self.rootpath / "long-private-key.pem"))
         with open(self.rootpath / "long-private-key.pem", "wb") as fh_out:
             fh_out.write(crypto.save_private_key(self.long_private_key, PASSPHRASE))
 
         self.long_public_key = self.long_private_key.public_key()
         self.long_public_key_pem = crypto.get_public_key_pem(self.long_public_key)
 
-        debug_message("Saving: " + str(self.rootpath / "long-public-key.pem"))
+        log_message("Saving: " + str(self.rootpath / "long-public-key.pem"))
         with open(self.rootpath / "long-public-key.pem", "wt") as fh_out:
             fh_out.write(crypto.get_public_key_pem(self.long_public_key))
 
-        debug_message("Saving: " + str(self.rootpath / "auth-token.txt"))
+        log_message("Saving: " + str(self.rootpath / "auth-token.txt"))
         with open(self.rootpath / "auth-token.txt", "wt") as fh_out:
             fh_out.write(crypto.create_jwt(AUTH, self.long_private_key))
 
@@ -215,23 +215,23 @@ class Signer:
 
         csr_pem = crypto.create_csr(self.domain, self.private_key)
 
-        debug_message("Awaiting new cert for domain: " + self.domain)
+        log_message("Awaiting new cert for domain: " + self.domain)
 
         signer = AcmeSigner(self.domain, self.email, self.port, self.staging)
 
         try:
             self.cert_pem = signer.get_acme_cert(csr_pem)
-            debug_success("Obtained new domain cert for: " + self.domain)
+            log_success("Obtained new domain cert for: " + self.domain)
         except Exception as e:
-            debug_failure("Unable to retrieve cert for: " + self.domain)
-            debug_failure("Reason: " + repr(e))
+            log_failure("Unable to retrieve cert for: " + self.domain)
+            log_failure("Reason: " + repr(e))
             return False
 
         self.save_key_pair_and_cert()
         self.set_next_update_time(crypto.load_cert(self.cert_pem.encode("ascii")))
         return True
 
-    def sign_request(self, hash_):
+    def __call__(self, hash_):
         now = format_date(datetime.datetime.utcnow())
 
         signature = crypto.sign(hash_, self.private_key)
@@ -253,7 +253,7 @@ class Signer:
         )
 
     async def renew_loop(self):
-        debug_message(
+        log_message(
             "Signer: Renewing domain certificate in {0}".format(
                 datetime.timedelta(seconds=self.next_update)
             )
@@ -264,10 +264,10 @@ class Signer:
         global renewing
 
         while True:
-            debug_message("Signer: Running domain certificate update...")
+            log_message("Signer: Running domain certificate update...")
             renewing = True
             await loop.run_in_executor(None, self.update_signing_key_and_cert)
-            debug_message(
+            log_message(
                 "Signer: Renew complete, next renew in {0}".format(
                     datetime.timedelta(seconds=update_time)
                 )

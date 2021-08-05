@@ -13,7 +13,8 @@ from authsign.utils import (
     parse_date,
     load_yaml,
 )
-from authsign.log import debug_assert, debug_message
+from authsign.log import log_assert, log_message
+from authsign.model import SignedHash
 
 
 DEFAULT_TRUSTED_ROOTS = "pkg://authsign.trusted/roots.yaml"
@@ -21,18 +22,18 @@ DEFAULT_TRUSTED_ROOTS = "pkg://authsign.trusted/roots.yaml"
 
 # ============================================================================
 class Verifier:
-    def __init__(self, trusted_roots_filename):
+    def __init__(self, trusted_roots_filename=None):
         trusted_roots_filename = trusted_roots_filename or DEFAULT_TRUSTED_ROOTS
-        debug_message("Loading trusted roots from: " + trusted_roots_filename)
+        log_message("Loading trusted roots from: " + trusted_roots_filename)
         trusted_roots = load_yaml(trusted_roots_filename)
 
         self.domain_cert_roots = trusted_roots["domain_cert_roots"]
         self.timestamp_cert_roots = trusted_roots["timestamp_cert_roots"]
 
-        debug_message(
+        log_message(
             "{0} Domain Cert Root(s) Loaded".format(len(self.domain_cert_roots))
         )
-        debug_message(
+        log_message(
             "{0} Timestamp Cert Root(s) Loaded".format(len(self.timestamp_cert_roots))
         )
 
@@ -57,26 +58,29 @@ class Verifier:
         """Check if cert fingerprint matches one of trusted fingerprints (sha-256 hashes)"""
         fingerprint = crypto.get_fingerprint(cert)
 
-        debug_assert(
+        log_assert(
             fingerprint in trusted,
             "Trusted {0} Root Cert (sha-256 fingerprint: {1})".format(
                 name, fingerprint
             ),
         )
 
-    def verify_request(self, signed_req):
+    def __call__(self, signed_req):
         """Verify signed hash request"""
+
+        if isinstance(signed_req, dict):
+            signed_req = SignedHash(**signed_req)
 
         try:
             # parse each cert in chain and validate signature using the next cert, returning first cert if valid
             certs = crypto.validate_cert_chain(signed_req.domainCert.encode("ascii"))
-            debug_assert(certs, "Verify certificate chain for domain certificate")
+            log_assert(certs, "Verify certificate chain for domain certificate")
             cert = certs[0]
 
             self.check_fingerprint(certs[-1], self.domain_cert_roots, "Domain")
 
             public_key = cert.public_key()
-            debug_assert(
+            log_assert(
                 crypto.verify(signed_req.hash, signed_req.signature, public_key),
                 "Verify signature of hash with public key from domain certificate",
             )
@@ -87,7 +91,7 @@ class Verifier:
                 long_public_key = crypto.load_public_key(
                     signed_req.longPublicKey.encode("ascii")
                 )
-                debug_assert(
+                log_assert(
                     crypto.verify(
                         crypto.get_public_key_pem(public_key),
                         signed_req.longSignature,
@@ -97,11 +101,11 @@ class Verifier:
                 )
 
             created = parse_date(signed_req.date)
-            debug_assert(created, "Parsed signature date")
+            log_assert(created, "Parsed signature date")
 
-            debug_assert(
+            log_assert(
                 is_time_range_valid(cert.not_valid_before, created, CERT_DURATION),
-                "Verify domain certificate was created within {0} creation date".format(
+                "Verify domain certificate was created within '{0}' of creation date".format(
                     str(CERT_DURATION)
                 ),
             )
@@ -110,14 +114,14 @@ class Verifier:
                 signed_req.signature, signed_req.timeSignature, signed_req.timestampCert
             )
 
-            debug_assert(
+            log_assert(
                 timestamp,
                 "Verify timeSignature is valid timestamp signature of hash signature with timestamp certificate",
             )
 
-            debug_assert(
+            log_assert(
                 is_time_range_valid(created, timestamp, STAMP_DURATION),
-                "Verify time signature created within {0} hour of creation date".format(
+                "Verify time signature created within '{0}' of creation date".format(
                     str(STAMP_DURATION)
                 ),
             )
@@ -126,7 +130,7 @@ class Verifier:
                 signed_req.timestampCert.encode("ascii")
             )
 
-            debug_assert(
+            log_assert(
                 timestamp_certs, "Verify certificate chain for timestamp certificate"
             )
 
@@ -136,5 +140,5 @@ class Verifier:
 
             return {"domain": domain}
 
-        except:
-            return False
+        except Exception as e:
+            return None

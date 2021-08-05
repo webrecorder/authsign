@@ -135,7 +135,7 @@ def validate_cert_chain(cert_pem):
         certs.append(cert)
         if prev_cert:
             if not validate_cert(prev_cert, cert.public_key()):
-                return False
+                return None
 
         prev_cert = cert
 
