@@ -2,6 +2,7 @@
 
 import base64
 import binascii
+import traceback
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
@@ -12,8 +13,9 @@ from cryptography.hazmat.backends import default_backend
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 
-import jwt
 import pem
+
+from authsign.log import debug_error
 
 
 def create_ecdsa_private_key():
@@ -31,13 +33,32 @@ def create_csr(domain, private_key):
         )
     )
 
-    csr = builder.sign(private_key, hashes.SHA256(), backend=default_backend())
+    return builder.sign(private_key, hashes.SHA256(), backend=default_backend())
+
+
+def get_as_pem(csr):
+    """Convert a csr or cert object to PEM"""
     return csr.public_bytes(serialization.Encoding.PEM).decode("ascii")
 
 
-def load_cert(pem):
+def create_signed_cert(csr, ca_cert, private_ca_key, start_date, end_date):
+    """Return a signed certificate from a CSR, using a CA cert + private key"""
+    builder = (
+        x509.CertificateBuilder()
+        .subject_name(csr.subject)
+        .issuer_name(ca_cert.issuer)
+        .public_key(csr.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(start_date)
+        .not_valid_after(end_date)
+    )
+
+    return builder.sign(private_ca_key, hashes.SHA256())
+
+
+def load_cert(cert_pem):
     """Load cert from PEM"""
-    return x509.load_pem_x509_certificate(pem, backend=default_backend())
+    return x509.load_pem_x509_certificate(cert_pem, backend=default_backend())
 
 
 def get_cert_subject_name(cert):
@@ -67,16 +88,16 @@ def save_private_key(private_key, passphrase):
     )
 
 
-def load_private_key(pem, passphrase):
+def load_private_key(pem_data, passphrase):
     """Load private key from PEM"""
     return serialization.load_pem_private_key(
-        pem, password=passphrase, backend=default_backend()
+        pem_data, password=passphrase, backend=default_backend()
     )
 
 
-def load_public_key(pem):
+def load_public_key(pem_data):
     """Load public key from PEM"""
-    return serialization.load_pem_public_key(pem, backend=default_backend())
+    return serialization.load_pem_public_key(pem_data, backend=default_backend())
 
 
 def sign(data, private_key):
@@ -92,7 +113,8 @@ def verify(data, signature, public_key):
     try:
         public_key.verify(signature, data, ec.ECDSA(hashes.SHA256()))
         return True
-    except Exception as e:
+    except Exception:
+        debug_error(traceback.format_exc())
         return False
 
 
@@ -120,13 +142,15 @@ def validate_cert(cert, public_key):
             return False
 
         return True
-    except Exception as e:
+    except Exception:
+        debug_error(traceback.format_exc())
         return False
 
 
 def validate_cert_chain(cert_pem):
-    """Validate a cert chain stored in PEM file. Each cert is validated with key of next cert in PEM file
-    Return parsed certs
+    """Validate a cert chain stored in PEM file.
+    Each cert is validated with key of next cert in PEM file
+    Returns all parsed certs
     """
     prev_cert = None
     certs = []
@@ -140,11 +164,3 @@ def validate_cert_chain(cert_pem):
         prev_cert = cert
 
     return certs
-
-
-def create_jwt(data, pem):
-    return jwt.encode(data, pem, algorithm="ES256K")
-
-
-def check_jwt(data, pem):
-    return jwt.decode(data, pem, algorithms=["ES256K"])

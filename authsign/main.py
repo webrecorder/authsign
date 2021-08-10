@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException, Header
 
 from authsign.signer import Signer
 from authsign.verifier import Verifier
-from authsign.model import SignedHash
+from authsign.model import SignedHash, SignReq
 
 from authsign.utils import load_yaml
 
@@ -34,6 +34,9 @@ async def startup_event():
     if os.environ.get("PORT_OVERRIDE"):
         config["signing"]["port"] = int(os.environ.get("PORT_OVERRIDE"))
 
+    if os.environ.get("AUTH_TOKEN"):
+        config["signing"]["auth_token"] = os.environ.get("AUTH_TOKEN")
+
     log_message("")
     log_message("Signer init...")
     signer = Signer(**config["signing"])
@@ -48,20 +51,23 @@ async def startup_event():
     log_message("")
 
 
-@app.post("/sign/{data}", response_model=SignedHash)
-async def sign_data(data, authorization: str = Header(None)):
+@app.post("/sign", response_model=SignedHash, response_model_exclude_none=True)
+async def sign_data(sign_req: SignReq, authorization: str = Header(None)):
     log_message("Signing Request...")
     if not signer.validate_token(authorization):
         log_failure("Invalid Auth Token")
         raise HTTPException(status_code=403, detail="Invalid auth token")
 
-    return signer(data)
+    try:
+        return signer(sign_req)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/verify")
-async def verify_data(signed_req: SignedHash):
+async def verify_data(signed_hash: SignedHash):
     log_message("Verifying Signed Request...")
-    result = await loop.run_in_executor(None, verifier, signed_req)
+    result = await loop.run_in_executor(None, verifier, signed_hash)
     if result:
         return result
 

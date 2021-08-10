@@ -4,5 +4,4 @@ pem
 fastapi
 uvicorn
 pyyaml
-pyjwt
 acme

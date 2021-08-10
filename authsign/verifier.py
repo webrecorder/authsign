@@ -1,11 +1,11 @@
-""" Verify signed requests"""
+""" Verify signed responses api"""
 
 
 import base64
-import datetime
+import traceback
+
 import rfc3161ng
 
-import authsign.crypto as crypto
 from authsign.utils import (
     CERT_DURATION,
     STAMP_DURATION,
@@ -13,8 +13,10 @@ from authsign.utils import (
     parse_date,
     load_yaml,
 )
-from authsign.log import log_assert, log_message
+from authsign import crypto
+from authsign.log import log_assert, log_message, debug_error
 from authsign.model import SignedHash
+from authsign.utils import format_date
 
 
 DEFAULT_TRUSTED_ROOTS = "pkg://authsign.trusted/roots.yaml"
@@ -22,6 +24,8 @@ DEFAULT_TRUSTED_ROOTS = "pkg://authsign.trusted/roots.yaml"
 
 # ============================================================================
 class Verifier:
+    """Verifies signed response from signer to check for validity"""
+
     def __init__(self, trusted_roots_filename=None):
         trusted_roots_filename = trusted_roots_filename or DEFAULT_TRUSTED_ROOTS
         log_message("Loading trusted roots from: " + trusted_roots_filename)
@@ -38,6 +42,8 @@ class Verifier:
         )
 
     def timestamp_verify(self, text, signature, cert_pem):
+        """Verify RFC 3161 timestamp given a cert, signature and text
+        Return the timestamp"""
         resp = rfc3161ng.decode_timestamp_response(base64.b64decode(signature))
         tst = resp.time_stamp_token
 
@@ -49,7 +55,8 @@ class Verifier:
                 data=text.encode("ascii"),
                 hashname="sha256",
             )
-        except Exception as e:
+        except Exception:
+            debug_error(traceback.format_exc())
             return None
 
         return rfc3161ng.get_timestamp(tst)
@@ -72,7 +79,8 @@ class Verifier:
             signed_req = SignedHash(**signed_req)
 
         try:
-            # parse each cert in chain and validate signature using the next cert, returning first cert if valid
+            log_message("Signing Software: " + str(signed_req.software))
+
             certs = crypto.validate_cert_chain(signed_req.domainCert.encode("ascii"))
             log_assert(certs, "Verify certificate chain for domain certificate")
             cert = certs[0]
@@ -85,22 +93,26 @@ class Verifier:
                 "Verify signature of hash with public key from domain certificate",
             )
 
-            domain = crypto.get_cert_subject_name(cert)
-
-            if signed_req.longSignature and signed_req.longPublicKey:
-                long_public_key = crypto.load_public_key(
-                    signed_req.longPublicKey.encode("ascii")
+            if signed_req.crossSignedCert:
+                cs_certs = crypto.validate_cert_chain(
+                    signed_req.crossSignedCert.encode("ascii")
                 )
                 log_assert(
-                    crypto.verify(
-                        crypto.get_public_key_pem(public_key),
-                        signed_req.longSignature,
-                        long_public_key,
-                    ),
-                    "Verify longSignature is a signature of public key via longPublicKey",
+                    cs_certs, "Verify certificate chain for cross-signed certificate"
+                )
+                cs_public_key = cs_certs[0].public_key()
+
+                log_assert(
+                    crypto.verify(signed_req.hash, signed_req.signature, cs_public_key),
+                    "Verify signature of hash with public key of cross-signed certificate",
                 )
 
-            created = parse_date(signed_req.date)
+            domain = crypto.get_cert_subject_name(cert)
+            log_assert(
+                domain == signed_req.domain, "Domain Cert Matches Expected: " + domain
+            )
+
+            created = parse_date(signed_req.created)
             log_assert(created, "Parsed signature date")
 
             log_assert(
@@ -116,7 +128,8 @@ class Verifier:
 
             log_assert(
                 timestamp,
-                "Verify timeSignature is valid timestamp signature of hash signature with timestamp certificate",
+                "Verify timeSignature is a valid timestamp signature of\
+ hash signature with timestamp certificate",
             )
 
             log_assert(
@@ -138,7 +151,8 @@ class Verifier:
                 timestamp_certs[-1], self.timestamp_cert_roots, "Timestamp"
             )
 
-            return {"domain": domain}
+            return {"observer": domain, "timestamp": format_date(timestamp)}
 
-        except Exception as e:
+        except Exception:
+            debug_error(traceback.format_exc())
             return None

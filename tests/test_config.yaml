@@ -7,6 +7,8 @@ signing:
 
   staging: True  # generate staging certs
 
+  auth_token: 'test-auth-token'
+
   # rfc3161 timestamp authority cert chain + timestamp urls
   # at least one required, if multiple, one is selected at random
   timestamping:

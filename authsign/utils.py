@@ -4,9 +4,14 @@ import contextlib
 
 import yaml
 
+# no limit on CA cert validity
+YEARS = datetime.timedelta(weeks=1000)
 
 CERT_DURATION = datetime.timedelta(hours=48)
-STAMP_DURATION = datetime.timedelta(hours=1)
+
+STAMP_DURATION = datetime.timedelta(minutes=10)
+
+ISO_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
 def is_time_range_valid(base, thedate, duration):
@@ -15,13 +20,13 @@ def is_time_range_valid(base, thedate, duration):
 
 def parse_date(datestr):
     try:
-        return datetime.datetime.strptime(datestr, "%Y-%m-%dT%H:%M:%SZ")
+        return datetime.datetime.strptime(datestr, ISO_FORMAT)
     except:
         return None
 
 
 def format_date(date):
-    return date.strftime("%Y-%m-%dT%H:%M:%SZ")
+    return date.strftime(ISO_FORMAT)
 
 
 @contextlib.contextmanager

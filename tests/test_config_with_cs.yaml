@@ -1,16 +1,18 @@
 signing:
-  domain: <my-domain>  # domain to retrieve a cert for (passed to ACME servers, required)
-  email: <my-email>  # email for acme auth (passed to ACME servers, required)
+  domain: example.com  # domain to retrieve a cert for (passed to ACME servers, required)
+  email: test@webrecorder.net  # email for acme auth (passed to ACME servers, required)
   port: 80  # local port for acme domain check (should be 80, change if running behind a proxy)
 
-  output: ./data  # dir to store the keys and certs (for internal use)
+  output: ./tests/test-out-with-cs/  # dir to store the keys and certs (for internal use)
 
-  staging: False  # generate staging certs
+  staging: True  # generate staging certs
+
+  auth_token: 'test-auth-token'
 
   # optional: set a 'cross-singing' CA and private key
   # this will be used along with ACME (Lets Encrypt) to sign the same CSR
-  # csca_cert: <ca-cert.pem>
-  # csca_private_key: <ca-private-key.pem>
+  csca_cert: ./tests/test-ca/cert.pem
+  csca_private_key: ./tests/test-ca/private-key.pem
 
   # rfc3161 timestamp authority cert chain + timestamp urls
   # at least one required, if multiple, one is selected at random
@@ -20,8 +22,6 @@ signing:
     - certfile: pkg://authsign.trusted/ts-chain.pem
       url: http://freetsa.org/tsr  # timeserver URL
 
-
-# default trusted roots stored in authsign.trusted package
-# uncomment to override
-# trusted_roots: pkg://authsign.trusted/roots.yaml
+# load test roots
+trusted_roots: ./tests/test_roots.yaml
 

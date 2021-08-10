@@ -3,10 +3,9 @@
 # vim: ai ts=4 sts=4 et sw=4 nu
 
 import pathlib
-import urllib.request
 from setuptools import setup, find_packages
 
-version = "0.2.0"
+from authsign import __version__
 
 
 def read(*names, **kwargs):
@@ -16,7 +15,7 @@ def read(*names, **kwargs):
 
 setup(
     name="authsign",
-    version=version,
+    version=__version__,
     description="Authenticating Data Signing + Verification Server",
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
@@ -43,10 +42,9 @@ setup(
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.7",
 )

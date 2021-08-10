@@ -1,6 +1,6 @@
 # AuthSigner: Signing Server + Verifier
 
-This system provides a signing + verifying server that can sign an arbitrary data passed in via `/sign/<data>`, as well as verify the request POST to `/verify`.
+This system provides a signing + verifying server that can sign an arbitrary data passed POSTed to `/sign`, as well as verify the signed response when POSTed to `/verify`.
 
 ## Operation
 
@@ -15,36 +15,53 @@ This system provides a signing + verifying server that can sign an arbitrary dat
 To support signing, the following data is created in the `./data` directory by default:
 
 - private-key.pem - an ECDSA private key
-- cert.pem - the domain certificate (obtained via lets encrypt)
-- auth-token.txt - an auth token for use with the sign endpoint
-- long-private-key.pem - A 'long term' private key
-- long-public-key.pem - A 'long term' public key
+- cert.pem - the domain certificate (obtained via lets encrypt) created via private-key.pem
+- cs-cert.pem - a 'cross-signing' certificate, also created with private-key.pem but with a custom CA.
 
-The `private-key.pem` and `cert.pem` are rotated (after 48 hours), while the long term key and auth token are not.
+The key and the cert(s) are rotated every 48 hours.
 
-Signing is done by making a POST request to `/sign/<data>` with JWT token stored in auth-token.txt
+Signing is done by making a POST request to `/sign` containing the data to sign and the creation date.
 
-(The auth token is be passed to client outside of this app for additional security).
+The data is POSTed as JSON ojbect: `{"hash": "...", "created": "..."}`
+
+### Auth Token
+
+For additional security, an auth token can be configured in the `config.yaml` or via an `AUTH_TOKEN` environment variable. The auth token
+will guard all signing requests, and needs to be passed to the client outside of the app.
+
+
+### Cross-Signing
+
+The authsigner also supports an optional 'cross-signing' CA, that can generate a certificate signed with the same private key as the domain (Lets Encrypt) certificate,
+using a privately created certificate authority. This allows for a backup validation to domain ownership, separate from LE.
+
+To enable this, a `csca-cert` and `csca-private-key` fields should be set in the YAML config, pointing to a Certificate Authority that will be used for cross-signing.
+The cross-singing cert chain is then also included in the response.
+
+### Signed Response
 
 The signed response includes a JSON with the following fields:
-- hash: original data
-- date: date of signing
-- signature: signature of hash with private key from cert
-- domainCert: PEM-encoded cert chain of the domain certificate (including CA)
-- timeSignature: a signature of previous 'signature' using the timestamp via timestamping server
-- timestampCert: PEM-encoded cert chain of the timestamp certificate (including CA)
-- longPublicKey: the long-term public key
-- longSignature: a signature of previous 'signature' with long-term key
+- `hash`: original data
+- `created`: the created date passed in.
+- `software`: the tool used to create the signature, would be `authsign <version>` where `<version>` is the current version of this package.
+- `signature`: signature of hash with private key from cert
+- `domainCert`: PEM-encoded cert chain of the domain certificate (including CA)
+- `domain`: the FQDN of the observer domain
+- `crossSignedCert`: PEM-encoded cert chain signed with same key as `domainCert` but using the cross-signing CA (optional)
+- `timeSignature`: a signature of previous 'signature' using the timestamp via timestamping server
+- `timestampCert`: PEM-encoded cert chain of the timestamp certificate (including CA)
 
+
+Note: By design, the creation date must be close to the current date of the timestamping server. Signing data 'too old' or wrong date will be rejected.
 
 ### Verification
 
 The verification API includes POSTing the signed JSON response to the `/verify` endpoint. (No auth token is required to verify).
 
 The verification checks include:
-- checking the signature and longSignature using the public key from domain cert and longPublicKey
+- checking the signature using the public key from domain cert (and optionally, the cross-signing cert)
 - checking the timeSignature is valid for the timestamp using the timestampCert
-- checking that the signed timestamp is within one hour of claimed signing time
+- checking that the signed created timestamp is within ten minutes of claimed signing time, and the domain cert was issued within 48-hours of signing time.
 - checking that PEM cert chains for domain cert and timestamp cert are valid
 - checking that the fingerprints of the root domain cert and timestamp cert are trusted.
 

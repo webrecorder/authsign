@@ -26,3 +26,7 @@ def log_success(text):
 
 def log_failure(text):
     logger.info("  " + (COLOR_SEQ % 31) + X + " " + text + RESET_SEQ)
+
+
+def debug_error(text):
+    logger.debug("  " + (COLOR_SEQ % 31) + X + " " + text + RESET_SEQ)
