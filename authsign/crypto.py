@@ -119,8 +119,9 @@ def verify(data, signature, public_key):
 
 
 def validate_cert(cert, public_key):
-    """Validation of cert with issuer cert public key (RSA or ECDSA ony)
-    Does not necessarily imply cert is truested
+    """Validation of cert with issuer cert public key (RSA or ECDSA only)
+    Does not alone imply the cert is trusted.
+
     """
     try:
         if isinstance(public_key, rsa.RSAPublicKey):
@@ -150,7 +151,7 @@ def validate_cert(cert, public_key):
 def validate_cert_chain(cert_pem):
     """Validate a cert chain stored in PEM file.
     Each cert is validated with key of next cert in PEM file
-    Returns all parsed certs
+    Returns all parsed certs, last cert being the root
     """
     prev_cert = None
     certs = []
