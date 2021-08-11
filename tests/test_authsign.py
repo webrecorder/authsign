@@ -5,22 +5,29 @@ import logging
 import datetime
 import base64
 import asyncio
+import requests
 
 from fastapi.testclient import TestClient
 
 
+CONFIG_WO_CS = os.path.join(os.path.dirname(__file__), "test_config.yaml")
+CONFIG_WITH_CS = os.path.join(os.path.dirname(__file__), "test_config_with_cs.yaml")
+
+TEST_ROOTS = os.path.join(os.path.dirname(__file__), "test_roots.yaml")
+OUT_TEST_ROOTS = os.path.join(os.path.dirname(__file__), "_out_test_roots.yaml")
+
+OUT_DIR_WO_CS = os.path.join(os.path.dirname(__file__), "test-out-wo-cs")
+OUT_DIR_WITH_CS = os.path.join(os.path.dirname(__file__), "test-out-with-cs")
+
 config = {
-    "without-cs": ("test_config.yaml", "test-out"),
-    "with-cs": ("test_config_with_cs.yaml", "test-out-with-cs"),
+    "without-cs": (CONFIG_WO_CS, OUT_DIR_WO_CS),
+    "with-cs": (CONFIG_WITH_CS, OUT_DIR_WITH_CS),
 }
 
 
 @pytest.fixture(scope="module", params=["without-cs", "with-cs"])
 def config_file(request):
-    return (
-        os.path.join(os.path.dirname(__file__), config[request.param][0]),
-        os.path.join(os.path.dirname(__file__), config[request.param][1]),
-    )
+    return (config[request.param][0], config[request.param][1])
 
 
 def has_opt_cs(param):
@@ -34,17 +41,12 @@ os.environ["NO_RENEW"] = "1"
 import authsign.main
 
 from authsign.utils import format_date
-from authsign import signer, __version__
-
-import authsign.crypto as crypto
-
+from authsign import signer, crypto, __version__
 
 app = authsign.main.app
 
 logger = logging.getLogger("authsign")
 logger.setLevel(logging.DEBUG)
-
-# out_dir = os.path.join(os.path.dirname(__file__), "test-out")
 
 cert_pem = None
 cs_cert_pem = None
@@ -57,17 +59,27 @@ def load_file(filename, out_dir):
         return fh.read()
 
 
+def setup_module():
+    res = requests.get("https://0.0.0.0:15000/intermediates/0", verify=False)
+    cert = crypto.load_cert(res.text.encode("ascii"))
+    fp = crypto.get_fingerprint(cert)
+
+    with open(TEST_ROOTS) as fh:
+        data = fh.read().replace("$PEBBLE_ROOT", fp)
+        with open(OUT_TEST_ROOTS, "wt") as fh2:
+            fh2.write(data)
+
+
 def teardown_module():
     if keep_data:
         return
 
-    paths = [
-        os.path.join(os.path.dirname(__file__), "test-out"),
-        os.path.join(os.path.dirname(__file__), "test-out-with-cs"),
-    ]
+    paths = [OUT_DIR_WO_CS, OUT_DIR_WITH_CS]
     for out_dir in paths:
         if os.path.exists(out_dir):
             shutil.rmtree(out_dir)
+
+    os.remove(OUT_TEST_ROOTS)
 
 
 def test_invalid_domain(port, keep, config_file):
@@ -78,8 +90,9 @@ def test_invalid_domain(port, keep, config_file):
     if os.path.exists(config_file[1]):
         pytest.skip("reusing existing cert, skip invalid domain check")
 
-    os.environ["DOMAIN_OVERRIDE"] = "example.com"
-    os.environ["PORT_OVERRIDE"] = port
+    os.environ["DOMAIN_OVERRIDE"] = "localhost.invalid"
+    if port:
+        os.environ["PORT_OVERRIDE"] = port
     os.environ["NO_RENEW"] = "1"
     os.environ["CONFIG"] = config_file[0]
     with pytest.raises(Exception):
@@ -89,7 +102,8 @@ def test_invalid_domain(port, keep, config_file):
 
 def test_inited(domain, port, config_file):
     os.environ["DOMAIN_OVERRIDE"] = domain
-    os.environ["PORT_OVERRIDE"] = port
+    if port:
+        os.environ["PORT_OVERRIDE"] = port
     os.environ["NO_RENEW"] = "1"
     os.environ["CONFIG"] = config_file[0]
     with TestClient(app) as client:
@@ -263,6 +277,6 @@ async def test_renew_cert(domain):
     while signer.renewing:
         await asyncio.sleep(0.5)
 
-    new_cert_pem = load_file("cert.pem", os.path.join(os.path.dirname(__file__), "test-out"))
+    new_cert_pem = load_file("cert.pem", OUT_DIR_WO_CS)
 
     assert new_cert_pem != orig_cert_pem

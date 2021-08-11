@@ -1,11 +1,11 @@
 signing:
   domain: example.com  # domain to retrieve a cert for (passed to ACME servers, required)
   email: test@webrecorder.net  # email for acme auth (passed to ACME servers, required)
-  port: 80  # local port for acme domain check (should be 80, change if running behind a proxy)
+  port: 5002  # local port for acme domain check (should be 80, change if running behind a proxy)
 
-  output: ./tests/test-out/  # dir to store the keys and certs (for internal use)
+  output: ./tests/test-out-wo-cs/  # dir to store the keys and certs (for internal use)
 
-  staging: True  # generate staging certs
+  staging: "https://localhost:14000/dir"  # generate staging certs
 
   auth_token: 'test-auth-token'
 
@@ -18,5 +18,5 @@ signing:
       url: http://freetsa.org/tsr  # timeserver URL
 
 # load test roots
-trusted_roots: ./tests/test_roots.yaml
+trusted_roots: ./tests/_out_test_roots.yaml
 

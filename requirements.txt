@@ -5,3 +5,4 @@ fastapi
 uvicorn
 pyyaml
 acme
+pyasn1

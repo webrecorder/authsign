@@ -1,0 +1,41 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 3
+      matrix:
+        python-version: [3.7]
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v1
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: install test reqs
+        run: pip install -U pytest pytest-cov pytest-asyncio coverage black
+
+      - name: Style Check
+        run: |
+          black --check *.py
+          black --check authsign/*.py
+          black --check tests/*.py
+
+      - name: install
+        run: python setup.py install
+
+      - name: run pebble in background
+        run: docker run -e PEBBLE_WFE_NONCEREJECT=0 -d --network "host" letsencrypt/pebble
+
+      - name: add custom domain to /etc/hosts
+        run: echo "127.0.0.1 localhost.test" | sudo tee -a /etc/hosts
+
+      - name: run tests
+        run: py.test --domain localhost.test --maxfail 1
