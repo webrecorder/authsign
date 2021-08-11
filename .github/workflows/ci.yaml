@@ -23,7 +23,7 @@ jobs:
         run: python setup.py install
 
       - name: run pebble in background
-        run: docker run -d letsencrypt/pebble
+        run: docker run -e PEBBLE_WFE_NONCEREJECT=0 -d --network "host" letsencrypt/pebble
 
       - name: install test reqs
         run: pip install -U pytest pytest-cov pytest-asyncio coverage
@@ -32,4 +32,4 @@ jobs:
         run: echo "127.0.0.1 localhost.test" | sudo tee -a /etc/hosts
 
       - name: run tests
-        run: py.test --domain localhost.test
+        run: py.test --domain localhost.test --maxfail 1
