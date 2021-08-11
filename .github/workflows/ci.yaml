@@ -25,6 +25,9 @@ jobs:
       - name: run pebble in background
         run: docker run -d letsencrypt/pebble
 
+      - name: install test reqs
+        run: pip install -U pytest pytest-cov pytest-asyncio coverage
+
       - name: add custom domain to /etc/hosts
         run: echo "127.0.0.1 localhost.test" | sudo tee -a /etc/hosts
 
