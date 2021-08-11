@@ -27,10 +27,7 @@ config = {
 
 @pytest.fixture(scope="module", params=["without-cs", "with-cs"])
 def config_file(request):
-    return (
-        config[request.param][0],
-        config[request.param][1]
-    )
+    return (config[request.param][0], config[request.param][1])
 
 
 def has_opt_cs(param):
@@ -44,7 +41,7 @@ os.environ["NO_RENEW"] = "1"
 import authsign.main
 
 from authsign.utils import format_date
-from authsign import signer, crypto,  __version__
+from authsign import signer, crypto, __version__
 
 app = authsign.main.app
 
@@ -71,6 +68,7 @@ def setup_module():
         data = fh.read().replace("$PEBBLE_ROOT", fp)
         with open(OUT_TEST_ROOTS, "wt") as fh2:
             fh2.write(data)
+
 
 def teardown_module():
     if keep_data:

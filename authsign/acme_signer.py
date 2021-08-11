@@ -48,7 +48,9 @@ class AcmeSigner:
         # Register account and accept TOS
         acc_key = jose.jwk.JWKRSA(key=self.create_rsa_key())
 
-        net = client.ClientNetwork(acc_key, user_agent=self.user_agent, verify_ssl=not self.staging)
+        net = client.ClientNetwork(
+            acc_key, user_agent=self.user_agent, verify_ssl=not self.staging
+        )
         directory = messages.Directory.from_json(net.get(self.directory_url).json())
         client_acme = client.ClientV2(directory, net=net)
 
