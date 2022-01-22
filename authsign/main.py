@@ -31,6 +31,12 @@ async def startup_event():
     if os.environ.get("DOMAIN_OVERRIDE"):
         config["signing"]["domain"] = os.environ.get("DOMAIN_OVERRIDE")
 
+    if os.environ.get("EMAIL_OVERRIDE"):
+        config["signing"]["email"] = os.environ.get("EMAIL_OVERRIDE")
+
+    if os.environ.get("DATA_OVERRIDE"):
+        config["signing"]["data"] = os.environ.get("DATA_OVERRIDE")
+
     if os.environ.get("PORT_OVERRIDE"):
         config["signing"]["port"] = int(os.environ.get("PORT_OVERRIDE"))
 

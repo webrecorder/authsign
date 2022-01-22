@@ -138,7 +138,10 @@ class Signer:
 
         self.auth_token = auth_token
 
-        log_message("Accepting Auth Token: " + str(self.auth_token))
+        if self.auth_token:
+            log_message("Auth Token Enabled")
+        else:
+            log_message("Auth Token Not Enabled")
 
         self.rootpath = Path(output or "./data")
         self.rootpath.mkdir(exist_ok=True)
