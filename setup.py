@@ -21,7 +21,7 @@ setup(
     long_description_content_type="text/markdown",
     author="Webrecorder Software",
     author_email="info@webrecorder.net",
-    url="https://github.com/ikreymer/authsign",
+    url="https://github.com/webrecorder/authsign",
     packages=find_packages(exclude=["tests"]),
     install_requires=[
         line.strip()

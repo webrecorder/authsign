@@ -5,7 +5,7 @@ on:
 
 jobs:
   push_to_registries:
-    name: Build pywb Docker image for release and push to Dockerhub
+    name: Build authsign Docker image for release and push to Dockerhub
     runs-on: ubuntu-latest
     steps:
       - 
@@ -16,7 +16,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: webrecorder/pywb
+          images: webrecorder/authsign
           tags: |
             type=match,pattern=(\d+\.\d+\.\d+),group=1
       -
