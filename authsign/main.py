@@ -12,7 +12,7 @@ from authsign.utils import load_yaml
 from authsign.log import log_message, log_failure
 
 
-#loop = asyncio.get_event_loop()
+# loop = asyncio.get_event_loop()
 app = FastAPI()
 
 signer = None
