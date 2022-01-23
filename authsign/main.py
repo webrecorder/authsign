@@ -12,7 +12,7 @@ from authsign.utils import load_yaml
 from authsign.log import log_message, log_failure
 
 
-loop = asyncio.get_event_loop()
+# loop = asyncio.get_event_loop()
 app = FastAPI()
 
 signer = None
@@ -30,6 +30,12 @@ async def startup_event():
 
     if os.environ.get("DOMAIN_OVERRIDE"):
         config["signing"]["domain"] = os.environ.get("DOMAIN_OVERRIDE")
+
+    if os.environ.get("EMAIL_OVERRIDE"):
+        config["signing"]["email"] = os.environ.get("EMAIL_OVERRIDE")
+
+    if os.environ.get("DATA_OVERRIDE"):
+        config["signing"]["data"] = os.environ.get("DATA_OVERRIDE")
 
     if os.environ.get("PORT_OVERRIDE"):
         config["signing"]["port"] = int(os.environ.get("PORT_OVERRIDE"))
@@ -67,8 +73,14 @@ async def sign_data(sign_req: SignReq, authorization: str = Header(None)):
 @app.post("/verify")
 async def verify_data(signed_hash: SignedHash):
     log_message("Verifying Signed Request...")
-    result = await loop.run_in_executor(None, verifier, signed_hash)
-    if result:
-        return result
+    # result = await loop.run_in_executor(None, verifier, signed_hash)
+    # if result:
+    #    return result
+    try:
+        result = verifier(signed_hash)
+        if result:
+            return result
+    except Exception as e:
+        pass
 
     raise HTTPException(status_code=400, detail="Not verified")

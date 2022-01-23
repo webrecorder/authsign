@@ -34,12 +34,8 @@ class Verifier:
         self.domain_cert_roots = trusted_roots["domain_cert_roots"]
         self.timestamp_cert_roots = trusted_roots["timestamp_cert_roots"]
 
-        log_message(
-            "{0} Domain Cert Root(s) Loaded".format(len(self.domain_cert_roots))
-        )
-        log_message(
-            "{0} Timestamp Cert Root(s) Loaded".format(len(self.timestamp_cert_roots))
-        )
+        log_message(f"{len(self.domain_cert_roots)} Domain Cert Root(s) Loaded")
+        log_message(f"{len(self.timestamp_cert_roots)} Timestamp Cert Root(s) Loaded")
 
     def timestamp_verify(self, text, signature, cert_pem):
         """Verify RFC 3161 timestamp given a cert, signature and text
@@ -67,9 +63,7 @@ class Verifier:
 
         log_assert(
             fingerprint in trusted,
-            "Trusted {0} Root Cert (sha-256 fingerprint: {1})".format(
-                name, fingerprint
-            ),
+            f"Trusted {name} Root Cert (sha-256 fingerprint: {fingerprint})",
         )
 
     def __call__(self, signed_req):
@@ -79,7 +73,7 @@ class Verifier:
             signed_req = SignedHash(**signed_req)
 
         try:
-            log_message("Signing Software: " + str(signed_req.software))
+            log_message(f"Signing Software: {str(signed_req.software)}")
 
             certs = crypto.validate_cert_chain(signed_req.domainCert.encode("ascii"))
             log_assert(certs, "Verify certificate chain for domain certificate")
@@ -108,8 +102,11 @@ class Verifier:
                 )
 
             domain = crypto.get_cert_subject_name(cert)
+            domain_fingerprint = crypto.get_fingerprint(cert)
+
             log_assert(
-                domain == signed_req.domain, "Domain Cert Matches Expected: " + domain
+                domain == signed_req.domain,
+                f"Domain Cert Matches Expected: '{domain}' (sha-256 fingerprint: {domain_fingerprint})",
             )
 
             created = parse_date(signed_req.created)
@@ -117,9 +114,7 @@ class Verifier:
 
             log_assert(
                 is_time_range_valid(cert.not_valid_before, created, CERT_DURATION),
-                "Verify domain certificate was created within '{0}' of creation date".format(
-                    str(CERT_DURATION)
-                ),
+                f"Verify WACZ creation date '{created}' - cert creation date '{cert.not_valid_before}' <= '{CERT_DURATION}'",
             )
 
             timestamp = self.timestamp_verify(
@@ -134,9 +129,7 @@ class Verifier:
 
             log_assert(
                 is_time_range_valid(created, timestamp, STAMP_DURATION),
-                "Verify time signature created within '{0}' of creation date".format(
-                    str(STAMP_DURATION)
-                ),
+                f"Verify signed timestamp time '{timestamp}' - WACZ creation date '{created}' <= '{STAMP_DURATION}'",
             )
 
             timestamp_certs = crypto.validate_cert_chain(
