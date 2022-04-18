@@ -44,12 +44,12 @@ async def startup_event():
     if os.environ.get("AUTH_TOKEN"):
         config["signing"]["auth_token"] = os.environ.get("AUTH_TOKEN")
 
-    if 'cert_duration' in config:
+    if "cert_duration" in config:
         cert_duration = datetime.timedelta(**config.get("cert_duration"))
     else:
         cert_duration = CERT_DURATION
 
-    if 'stamp_duration' in config:
+    if "stamp_duration" in config:
         stamp_duration = datetime.timedelta(**config.get("stamp_duration"))
     else:
         stamp_duration = STAMP_DURATION
