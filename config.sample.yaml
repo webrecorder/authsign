@@ -21,6 +21,16 @@ signing:
       url: http://freetsa.org/tsr  # timeserver URL
 
 
+# default certificate rotation time
+cert_duration:
+  days: 7
+
+# default timestamp validity time (timestamp must be within this time of creation time)
+stamp_duration:
+  minutes: 10 
+
+
+
 # default trusted roots stored in authsign.trusted package
 # uncomment to override
 # trusted_roots: pkg://authsign.trusted/roots.yaml

@@ -7,7 +7,7 @@ import yaml
 # no limit on CA cert validity
 YEARS = datetime.timedelta(weeks=1000)
 
-CERT_DURATION = datetime.timedelta(hours=48)
+CERT_DURATION = datetime.timedelta(days=7)
 
 STAMP_DURATION = datetime.timedelta(minutes=10)
 

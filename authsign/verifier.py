@@ -26,13 +26,18 @@ DEFAULT_TRUSTED_ROOTS = "pkg://authsign.trusted/roots.yaml"
 class Verifier:
     """Verifies signed response from signer to check for validity"""
 
-    def __init__(self, trusted_roots_filename=None):
+    def __init__(
+        self, trusted_roots_filename=None, cert_duration=None, stamp_duration=None
+    ):
         trusted_roots_filename = trusted_roots_filename or DEFAULT_TRUSTED_ROOTS
         log_message("Loading trusted roots from: " + trusted_roots_filename)
         trusted_roots = load_yaml(trusted_roots_filename)
 
         self.domain_cert_roots = trusted_roots["domain_cert_roots"]
         self.timestamp_cert_roots = trusted_roots["timestamp_cert_roots"]
+
+        self.cert_duration = cert_duration or CERT_DURATION
+        self.stamp_duration = stamp_duration or STAMP_DURATION
 
         log_message(f"{len(self.domain_cert_roots)} Domain Cert Root(s) Loaded")
         log_message(f"{len(self.timestamp_cert_roots)} Timestamp Cert Root(s) Loaded")
@@ -113,8 +118,8 @@ class Verifier:
             log_assert(created, "Parsed signature date")
 
             log_assert(
-                is_time_range_valid(cert.not_valid_before, created, CERT_DURATION),
-                f"Verify WACZ creation date '{created}' - cert creation date '{cert.not_valid_before}' <= '{CERT_DURATION}'",
+                is_time_range_valid(cert.not_valid_before, created, self.cert_duration),
+                f"Verify WACZ creation date '{created}' - cert creation date '{cert.not_valid_before}' <= '{self.cert_duration}'",
             )
 
             timestamp = self.timestamp_verify(
@@ -128,8 +133,8 @@ class Verifier:
             )
 
             log_assert(
-                is_time_range_valid(created, timestamp, STAMP_DURATION),
-                f"Verify signed timestamp time '{timestamp}' - WACZ creation date '{created}' <= '{STAMP_DURATION}'",
+                is_time_range_valid(created, timestamp, self.stamp_duration),
+                f"Verify signed timestamp time '{timestamp}' - WACZ creation date '{created}' <= '{self.stamp_duration}'",
             )
 
             timestamp_certs = crypto.validate_cert_chain(

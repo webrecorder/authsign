@@ -130,6 +130,8 @@ class Signer:
         auth_token=None,
         csca_cert=None,
         csca_private_key=None,
+        cert_duration=None,
+        stamp_duration=None,
     ):
         self.domain = domain
         self.email = email
@@ -145,6 +147,9 @@ class Signer:
 
         self.rootpath = Path(output or "./data")
         self.rootpath.mkdir(exist_ok=True)
+
+        self.cert_duration = cert_duration or CERT_DURATION
+        self.stamp_duration = stamp_duration or STAMP_DURATION
 
         if csca_cert and csca_private_key:
             self.csca_signing = CertKeyPair().load(
@@ -194,7 +199,10 @@ class Signer:
         """Load key pair and cert"""
 
         self.domain_signing = CertKeyPair().load(
-            "Domain Auth", self.rootpath / "cert.pem", self.rootpath / "private-key.pem"
+            "Domain Auth",
+            self.rootpath / "cert.pem",
+            self.rootpath / "private-key.pem",
+            duration=self.cert_duration,
         )
 
         self.set_next_update_time(self.domain_signing.cert)
@@ -204,6 +212,7 @@ class Signer:
                 "Cross-Signing Cert",
                 self.rootpath / "cs-cert.pem",
                 self.rootpath / "private-key.pem",
+                duration=self.cert_duration,
             )
 
             self.cs_cert_pem = cross_signing.cert_pem
@@ -214,7 +223,7 @@ class Signer:
             )
 
     def set_next_update_time(self, cert):
-        next_update = cert.not_valid_before + CERT_DURATION
+        next_update = cert.not_valid_before + self.cert_duration
         log_message(
             "Certificate will be used from {0} to {1}".format(
                 cert.not_valid_before, next_update
@@ -270,7 +279,7 @@ class Signer:
                 self.csca_signing.cert,
                 self.csca_signing.private_key,
                 now,
-                now + CERT_DURATION,
+                now + self.cert_duration,
             )
             self.cs_cert_pem = crypto.get_as_pem(cs_cert)
 
@@ -286,9 +295,9 @@ class Signer:
 
         created_dt = parse_date(sign_req.created)
 
-        if not is_time_range_valid(created_dt, timestamp, STAMP_DURATION):
+        if not is_time_range_valid(created_dt, timestamp, self.stamp_duration):
             msg = "Created timestamp is out of range: Must be between {0} and {1}, but is {2}".format(
-                timestamp, timestamp + STAMP_DURATION, created_dt
+                timestamp, timestamp + self.stamp_duration, created_dt
             )
             raise Exception(msg)
 
@@ -312,7 +321,7 @@ class Signer:
         )
         loop = asyncio.get_event_loop()
         await asyncio.sleep(self.next_update)
-        update_time = CERT_DURATION.total_seconds()
+        update_time = self.cert_duration.total_seconds()
         global renewing
 
         while True:
