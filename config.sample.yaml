@@ -3,8 +3,6 @@ signing:
   email: <my-email>  # email for acme auth (passed to ACME servers, required)
   port: 80  # local port for acme domain check (should be 80, change if running behind a proxy)
 
-  rotation_time: 
-
   output: ./data  # dir to store the keys and certs (for internal use)
 
   staging: False  # generate staging certs
