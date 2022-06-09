@@ -7,6 +7,7 @@ import datetime
 import base64
 import random
 import asyncio
+import traceback
 
 from pyasn1.codec.der import encoder
 import rfc3161ng
@@ -268,6 +269,7 @@ class Signer:
         except Exception as e:
             log_failure("Unable to retrieve cert for: " + self.domain)
             log_failure("Reason: " + repr(e))
+            log_failure(traceback.format_exc())
             self.domain_signing = None
             return
 

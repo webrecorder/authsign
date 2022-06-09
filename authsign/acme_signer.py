@@ -101,7 +101,8 @@ class AcmeSigner:
             yield servers
         finally:
             # Shutdown client web server and unbind from PORT
-            servers.shutdown_and_server_close()
+            if servers:
+                servers.shutdown_and_server_close()
 
     def perform_http01(self, client_acme, challb, orderr):
         """Set up standalone webserver and perform HTTP-01 challenge."""
