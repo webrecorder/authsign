@@ -13,15 +13,13 @@ from authsign.utils import load_yaml, CERT_DURATION, STAMP_DURATION
 from authsign.log import log_message, log_failure
 
 
-# loop = asyncio.get_event_loop()
 app = FastAPI()
 
 signer = None
 verifier = None
 
 
-@app.on_event("startup")
-async def startup_event():
+def load_certs(server):
     configfile = os.environ.get("CONFIG", "config.yaml")
 
     global signer
