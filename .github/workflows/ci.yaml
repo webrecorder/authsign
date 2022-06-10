@@ -28,11 +28,11 @@ jobs:
           black --check authsign/*.py
           black --check tests/*.py
 
-      - name: Lint Check
-        run: pylint --rcfile=pylint.ini authsign/
-
       - name: install
         run: python setup.py install
+
+      - name: Lint Check
+        run: pylint --rcfile=pylint.ini authsign/
 
       - name: run pebble in background
         run: docker run -e PEBBLE_WFE_NONCEREJECT=0 -d --network "host" letsencrypt/pebble
