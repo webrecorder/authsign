@@ -20,7 +20,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: install test reqs
-        run: pip install -U pytest pytest-cov pytest-asyncio coverage black
+        run: pip install -U pytest pytest-cov pytest-asyncio coverage black pip setuptools
 
       - name: Style Check
         run: |
