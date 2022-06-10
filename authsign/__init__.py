@@ -1,1 +1,3 @@
-__version__ = "0.4.1"
+""" authsign package """
+
+__version__ = "0.5.0"

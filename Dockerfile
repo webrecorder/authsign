@@ -15,5 +15,5 @@ RUN python setup.py install
 # override by using custom config.yaml, or setting the DOMAIN_OVERRIDE and EMAIL_OVERRIDE
 ADD config.sample.yaml config.yaml
 
-CMD uvicorn authsign.main:app --port 8080 --host 0.0.0.0 --log-config /app/log.json
+CMD uvicorn authsign.main:app --port 8080 --workers 1 --host 0.0.0.0 --log-config /app/log.json
 

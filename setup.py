@@ -28,7 +28,7 @@ setup(
         for line in read("requirements.txt").splitlines()
         if not line.strip().startswith("#")
     ],
-    test_requires=["pytest", "pytest-asyncio"],
+    tests_require=["pytest", "pytest-asyncio"],
     zip_safe=True,
     package_data={"authsign.trusted": ["*"]},
     data_files={
