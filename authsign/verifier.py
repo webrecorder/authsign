@@ -9,14 +9,13 @@ import rfc3161ng
 from authsign.utils import (
     CERT_DURATION,
     STAMP_DURATION,
-    is_time_range_valid,
-    parse_date,
+    no_older_then,
+    format_date,
     load_yaml,
 )
 from authsign import crypto
 from authsign.log import log_assert, log_message, debug_error
 from authsign.model import SignedHash
-from authsign.utils import format_date
 
 
 DEFAULT_TRUSTED_ROOTS = "pkg://authsign.trusted/roots.yaml"
@@ -114,12 +113,14 @@ class Verifier:
                 f"Domain Cert Matches Expected: '{domain}' (sha-256 fingerprint: {domain_fingerprint})",
             )
 
-            created = parse_date(signed_req.created)
+            created = signed_req.created
             log_assert(created, "Parsed signature date")
 
             log_assert(
-                is_time_range_valid(cert.not_valid_before, created, self.cert_duration),
-                f"Verify WACZ creation date '{created}' - cert creation date '{cert.not_valid_before}' <= '{self.cert_duration}'",
+                cert.not_valid_before
+                <= created
+                <= cert.not_valid_before + self.cert_duration,
+                f"Verify creation date '{created}' - cert creation date '{cert.not_valid_before}' <= '{self.cert_duration}'",
             )
 
             timestamp = self.timestamp_verify(
@@ -133,8 +134,8 @@ class Verifier:
             )
 
             log_assert(
-                is_time_range_valid(created, timestamp, self.stamp_duration),
-                f"Verify signed timestamp time '{timestamp}' - WACZ creation date '{created}' <= '{self.stamp_duration}'",
+                no_older_then(created, timestamp, self.stamp_duration),
+                f"Verify created date '{created}' is no older than {self.stamp_duration}' from '{timestamp}'",
             )
 
             timestamp_certs = crypto.validate_cert_chain(

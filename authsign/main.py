@@ -1,3 +1,5 @@
+""" main entrypoint for authsign web server """
+
 import asyncio
 import os
 import datetime
@@ -21,7 +23,8 @@ verifier = None
 
 
 @app.on_event("startup")
-async def startup_event():
+async def load_certs():
+    """load existing certs or request new ones if expired don't exist"""
     configfile = os.environ.get("CONFIG", "config.yaml")
 
     global signer
@@ -75,6 +78,7 @@ async def startup_event():
 
 @app.post("/sign", response_model=SignedHash, response_model_exclude_none=True)
 async def sign_data(sign_req: SignReq, authorization: str = Header(None)):
+    """sign data api"""
     log_message("Signing Request...")
     if not signer.validate_token(authorization):
         log_failure("Invalid Auth Token")
@@ -88,15 +92,15 @@ async def sign_data(sign_req: SignReq, authorization: str = Header(None)):
 
 @app.post("/verify")
 async def verify_data(signed_hash: SignedHash):
+    """verify data api"""
     log_message("Verifying Signed Request...")
-    # result = await loop.run_in_executor(None, verifier, signed_hash)
-    # if result:
-    #    return result
+
     try:
         result = verifier(signed_hash)
         if result:
             return result
-    except Exception as e:
+    except Exception:
+        # not adding details for security
         pass
 
     raise HTTPException(status_code=400, detail="Not verified")

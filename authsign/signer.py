@@ -1,5 +1,5 @@
 """
-Generate Cert and Pub Key via ACME
+Generate or load certs and handle signing
 """
 from pathlib import Path
 
@@ -22,8 +22,7 @@ from authsign.utils import (
     CERT_DURATION,
     STAMP_DURATION,
     YEARS,
-    parse_date,
-    is_time_range_valid,
+    no_older_then,
     open_file,
 )
 
@@ -36,7 +35,10 @@ renewing = False
 
 
 # ============================================================================
+# pylint: disable=too-few-public-methods
 class Timestamper:
+    """handle rfc3161 timestamp signing"""
+
     def __init__(self, certfile=None, url=None):
         self.cert_pem = None
         with open_file(certfile, "rb") as fh_in:
@@ -47,6 +49,7 @@ class Timestamper:
         )
 
     def __call__(self, text):
+        """perform signing op"""
         tsr = self._timestamper(data=text.encode("ascii"), return_tsr=True)
 
         tst = tsr.time_stamp_token
@@ -57,6 +60,7 @@ class Timestamper:
 
 
 # ============================================================================
+# pylint: disable=too-many-instance-attributes,too-many-arguments
 class CertKeyPair:
     """Loads a cert + private key from PEM, extracts public key from cert"""
 
@@ -72,6 +76,8 @@ class CertKeyPair:
     def load(
         self, name, certfile, private_key, passphrase=PASSPHRASE, duration=CERT_DURATION
     ):
+        """load existing keypair and certs from file system. load public key from cert"""
+
         log_message("{0}: Loading Cert: {1}".format(name, str(certfile)))
         with open(certfile, "rb") as fh_in:
             self.set_cert(fh_in.read())
@@ -89,7 +95,7 @@ class CertKeyPair:
         log_assert(self.test_keys("Data Signature Test"), "Validating key pair")
 
         log_assert(
-            is_time_range_valid(self.cert.not_valid_before, now, duration)
+            self.cert.not_valid_before <= now <= self.cert.not_valid_before + duration
             and now <= self.cert.not_valid_after,
             "Validating cert still valid",
         )
@@ -97,6 +103,7 @@ class CertKeyPair:
         return self
 
     def init_new(self):
+        """init new key pair for signing"""
         self.private_key = crypto.create_ecdsa_private_key()
 
         self.public_key = self.private_key.public_key()
@@ -105,6 +112,7 @@ class CertKeyPair:
         return self
 
     def set_cert(self, cert_pem):
+        """init cert via pem"""
         self.cert_pem = cert_pem
         if isinstance(cert_pem, str):
             cert_pem = cert_pem.encode("ascii")
@@ -117,6 +125,7 @@ class CertKeyPair:
 
 
 # ============================================================================
+# pylint: disable=too-many-arguments
 class Signer:
     """Signing cert, private, public key generator"""
 
@@ -188,6 +197,7 @@ class Signer:
         self.timestampers = [Timestamper(**ts_data) for ts_data in timestamping]
 
     def validate_token(self, auth_header):
+        """validate the passed in auth header token"""
         if not self.auth_token:
             return True
 
@@ -206,8 +216,6 @@ class Signer:
             duration=self.cert_duration,
         )
 
-        self.set_next_update_time(self.domain_signing.cert)
-
         if self.csca_signing:
             cross_signing = CertKeyPair().load(
                 "Cross-Signing Cert",
@@ -224,6 +232,7 @@ class Signer:
             )
 
     def set_next_update_time(self, cert):
+        """store the time for next cert renew"""
         next_update = cert.not_valid_before + self.cert_duration
         log_message(
             "Certificate will be used from {0} to {1}".format(
@@ -295,18 +304,19 @@ class Signer:
 
         time_signature, timestamp = timestamper(signature)
 
-        created_dt = parse_date(sign_req.created)
+        created = sign_req.created
 
-        if not is_time_range_valid(created_dt, timestamp, self.stamp_duration):
-            msg = "Created timestamp is out of range: Must be between {0} and {1}, but is {2}".format(
-                timestamp, timestamp + self.stamp_duration, created_dt
+        if not no_older_then(created, timestamp, self.stamp_duration):
+            msg = "Created timestamp is out of range: Must be between between {0} and {1}, but is {2}".format(
+                timestamp - self.stamp_duration, timestamp, created
             )
+            print(msg)
             raise Exception(msg)
 
         return SignedHash(
             software="authsigner " + __version__,
             hash=sign_req.hash,
-            created=sign_req.created,
+            created=created,
             signature=signature,
             timeSignature=time_signature,
             domain=self.domain,
@@ -316,6 +326,9 @@ class Signer:
         )
 
     async def renew_loop(self):
+        """sleep and run cert renew process in a loop"""
+        self.set_next_update_time(self.domain_signing.cert)
+
         log_message(
             "Signer: Renewing domain certificate in {0}".format(
                 datetime.timedelta(seconds=self.next_update)

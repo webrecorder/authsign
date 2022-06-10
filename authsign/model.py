@@ -1,12 +1,30 @@
+""" Models for api """
+
 from typing import Optional
-from pydantic import BaseModel
+from datetime import datetime
+
+from pydantic import BaseModel, validator
+
+from authsign.utils import parse_date, format_date
 
 
 class SignReq(BaseModel):
     """Sign Request consisting of hash and created date"""
 
     hash: str
-    created: str
+    created: datetime
+
+    # pylint: disable=no-self-argument
+    @validator("created", pre=True)
+    def dt_validate(cls, dt):
+        """parse using dateutil if string"""
+        return parse_date(dt)
+
+    # pylint: disable=too-few-public-methods
+    class Config:
+        """custom serializer for datetime"""
+
+        json_encoders = {datetime: format_date}
 
 
 class SignedHash(SignReq):

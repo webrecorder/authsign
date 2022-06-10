@@ -130,7 +130,8 @@ def test_reload_same_cert(domain, config_file):
 
 
 def test_sign_invalid_token(domain, config_file):
-    req = {"hash": "some_data", "created": format_date(datetime.datetime.utcnow())}
+    now = format_date(datetime.datetime.utcnow())
+    req = {"hash": "some_data", "created": now}
 
     with TestClient(app) as client:
         resp = client.post("/sign", json=req)
@@ -155,8 +156,9 @@ def test_sign_valid_token(domain, config_file):
         resp = client.post(
             "/sign", headers={"Authorization": "bearer " + auth_token}, json=req
         )
-        assert resp.status_code == 200
         signed_hash = resp.json()
+        print(signed_hash)
+        assert resp.status_code == 200
 
     expected = {
         "hash",
@@ -182,10 +184,39 @@ def test_sign_valid_token(domain, config_file):
     assert signed_hash["software"] == "authsigner " + __version__
 
 
-def test_sign_valid_token_bad_date(domain, config_file):
+def test_sign_valid_token_a_few_mins_ago(domain, config_file):
+    now = format_date(datetime.datetime.utcnow() - datetime.timedelta(minutes=5))
+    req = {"hash": "some_data", "created": now}
+
+    with TestClient(app) as client:
+        resp = client.post(
+            "/sign", headers={"Authorization": "bearer " + auth_token}, json=req
+        )
+        assert resp.status_code == 200
+
+
+def test_sign_valid_token_wrong_date_too_early(domain, config_file):
     req = {
         "hash": "some_data",
-        "created": format_date(datetime.datetime.utcnow() - datetime.timedelta(days=1)),
+        "created": format_date(
+            datetime.datetime.utcnow() - datetime.timedelta(minutes=11)
+        ),
+    }
+
+    global signed_hash
+    with TestClient(app) as client:
+        resp = client.post(
+            "/sign", headers={"Authorization": "bearer " + auth_token}, json=req
+        )
+        assert resp.status_code == 400
+
+
+def test_sign_valid_token_bad_date_in_future(domain, config_file):
+    req = {
+        "hash": "some_data",
+        "created": format_date(
+            datetime.datetime.utcnow() + datetime.timedelta(seconds=30)
+        ),
     }
 
     global signed_hash
@@ -234,7 +265,7 @@ def test_verify_invalid_bad_date(domain, config_file):
         req = signed_hash.copy()
         req["created"] = "abc"
         resp = client.post("/verify", json=req)
-        assert resp.status_code == 400
+        assert resp.status_code == 422
 
 
 def test_verify_invalid_date_out_of_range(domain, config_file):

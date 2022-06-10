@@ -8,7 +8,7 @@ jobs:
     strategy:
       max-parallel: 3
       matrix:
-        python-version: [3.7]
+        python-version: [3.9]
 
     steps:
       - name: checkout
@@ -20,7 +20,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: install test reqs
-        run: pip install -U pytest pytest-cov pytest-asyncio coverage black
+        run: pip install -U pytest pytest-cov pytest-asyncio coverage black pip setuptools pylint
 
       - name: Style Check
         run: |
@@ -30,6 +30,9 @@ jobs:
 
       - name: install
         run: python setup.py install
+
+      - name: Lint Check
+        run: pylint --rcfile=pylint.ini authsign/
 
       - name: run pebble in background
         run: docker run -e PEBBLE_WFE_NONCEREJECT=0 -d --network "host" letsencrypt/pebble
