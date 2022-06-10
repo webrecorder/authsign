@@ -198,7 +198,9 @@ def test_sign_valid_token_a_few_mins_ago(domain, config_file):
 def test_sign_valid_token_wrong_date_too_early(domain, config_file):
     req = {
         "hash": "some_data",
-        "created": format_date(datetime.datetime.utcnow() - datetime.timedelta(minutes=11)),
+        "created": format_date(
+            datetime.datetime.utcnow() - datetime.timedelta(minutes=11)
+        ),
     }
 
     global signed_hash
