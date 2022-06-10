@@ -196,6 +196,20 @@ def test_sign_valid_token_bad_date(domain, config_file):
         assert resp.status_code == 400
 
 
+def test_sign_valid_token_bad_date_2(domain, config_file):
+    req = {
+        "hash": "some_data",
+        "created": format_date(datetime.datetime.utcnow() - datetime.timedelta(seconds=8)),
+    }
+
+    global signed_hash
+    with TestClient(app) as client:
+        resp = client.post(
+            "/sign", headers={"Authorization": "bearer " + auth_token}, json=req
+        )
+        assert resp.status_code == 400
+
+
 def test_verify_invalid_missing(domain, config_file):
     with TestClient(app) as client:
         req = signed_hash.copy()

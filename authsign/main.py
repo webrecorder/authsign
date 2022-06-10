@@ -1,8 +1,11 @@
 import asyncio
 import os
 import datetime
+import atexit
+import tempfile
 
 from fastapi import FastAPI, HTTPException, Header
+from NamedAtomicLock import NamedAtomicLock
 
 from authsign.signer import Signer
 from authsign.verifier import Verifier
@@ -18,7 +21,11 @@ app = FastAPI()
 signer = None
 verifier = None
 
+renew_lock = None
+RENEW_LOCK_NAME = ".cert-renew-lock"
 
+
+# ============================================================================
 def load_certs(server):
     configfile = os.environ.get("CONFIG", "config.yaml")
 
@@ -61,9 +68,6 @@ def load_certs(server):
         cert_duration=cert_duration, stamp_duration=stamp_duration, **config["signing"]
     )
 
-    if not os.environ.get("NO_RENEW"):
-        asyncio.ensure_future(signer.renew_loop())
-
     global verifier
     log_message("")
     log_message("Verifier Init...")
@@ -71,6 +75,7 @@ def load_certs(server):
     log_message("")
 
 
+# ============================================================================
 @app.post("/sign", response_model=SignedHash, response_model_exclude_none=True)
 async def sign_data(sign_req: SignReq, authorization: str = Header(None)):
     log_message("Signing Request...")
@@ -84,6 +89,7 @@ async def sign_data(sign_req: SignReq, authorization: str = Header(None)):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+# ============================================================================
 @app.post("/verify")
 async def verify_data(signed_hash: SignedHash):
     log_message("Verifying Signed Request...")
@@ -98,3 +104,44 @@ async def verify_data(signed_hash: SignedHash):
         pass
 
     raise HTTPException(status_code=400, detail="Not verified")
+
+
+# ============================================================================
+@app.on_event("startup")
+def renew():
+    if os.environ.get("NO_RENEW") or not signer:
+        return
+
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(None, check_renew)
+
+
+# ============================================================================
+def release_renew_lock():
+    global renew_lock
+    if renew_lock:
+        renew_lock.release()
+        renew_lock = None
+        log_message("renew lock released, stopping renew check")
+
+
+# ============================================================================
+def check_renew():
+    global renew_lock
+    renew_lock = NamedAtomicLock(RENEW_LOCK_NAME)
+
+    if renew_lock.acquire(timeout=0):
+        atexit.register(release_renew_lock)
+
+        log_message("acquire renew loop lock: renew check starting")
+        asyncio.run(signer.renew_loop())
+
+
+# ============================================================================
+def on_exit(server):
+    try:
+        os.rmdir(os.path.join(tempfile.gettempdir(), RENEW_LOCK_NAME))
+    except:
+        pass
+
+

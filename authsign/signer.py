@@ -206,8 +206,6 @@ class Signer:
             duration=self.cert_duration,
         )
 
-        self.set_next_update_time(self.domain_signing.cert)
-
         if self.csca_signing:
             cross_signing = CertKeyPair().load(
                 "Cross-Signing Cert",
@@ -297,7 +295,7 @@ class Signer:
 
         created_dt = parse_date(sign_req.created)
 
-        if not is_time_range_valid(created_dt, timestamp, self.stamp_duration):
+        if not is_time_range_valid(timestamp, created_dt, self.stamp_duration):
             msg = "Created timestamp is out of range: Must be between {0} and {1}, but is {2}".format(
                 timestamp, timestamp + self.stamp_duration, created_dt
             )
@@ -316,6 +314,8 @@ class Signer:
         )
 
     async def renew_loop(self):
+        self.set_next_update_time(self.domain_signing.cert)
+
         log_message(
             "Signer: Renewing domain certificate in {0}".format(
                 datetime.timedelta(seconds=self.next_update)

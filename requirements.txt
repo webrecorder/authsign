@@ -2,7 +2,9 @@ cryptography
 rfc3161ng
 pem
 fastapi
-uvicorn
+uvicorn[standard]
+gunicorn
 pyyaml
 acme
 pyasn1
+NamedAtomicLock
