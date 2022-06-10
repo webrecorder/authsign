@@ -26,7 +26,7 @@ RENEW_LOCK_NAME = ".cert-renew-lock"
 
 
 # ============================================================================
-def load_certs(server):
+def load_certs(_=None):
     configfile = os.environ.get("CONFIG", "config.yaml")
 
     global signer

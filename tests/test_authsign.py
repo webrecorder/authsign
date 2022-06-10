@@ -69,7 +69,6 @@ def setup_module():
         with open(OUT_TEST_ROOTS, "wt") as fh2:
             fh2.write(data)
 
-
 def teardown_module():
     if keep_data:
         return
@@ -96,6 +95,8 @@ def test_invalid_domain(port, keep, config_file):
     os.environ["NO_RENEW"] = "1"
     os.environ["CONFIG"] = config_file[0]
     with pytest.raises(Exception):
+        authsign.main.load_certs()
+
         with TestClient(app) as client:
             pass
 
@@ -106,6 +107,7 @@ def test_inited(domain, port, config_file):
         os.environ["PORT_OVERRIDE"] = port
     os.environ["NO_RENEW"] = "1"
     os.environ["CONFIG"] = config_file[0]
+    authsign.main.load_certs()
     with TestClient(app) as client:
         global cert_pem
         cert_pem = load_file("cert.pem", config_file[1])

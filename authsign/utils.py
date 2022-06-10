@@ -15,7 +15,7 @@ ISO_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
 def is_time_range_valid(base, thedate, duration):
-    return base <= thedate and thedate - base <= duration
+    return thedate >= base and thedate <= base + duration
 
 
 def parse_date(datestr):
