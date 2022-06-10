@@ -69,6 +69,7 @@ def setup_module():
         with open(OUT_TEST_ROOTS, "wt") as fh2:
             fh2.write(data)
 
+
 def teardown_module():
     if keep_data:
         return
@@ -201,7 +202,9 @@ def test_sign_valid_token_bad_date(domain, config_file):
 def test_sign_valid_token_bad_date_2(domain, config_file):
     req = {
         "hash": "some_data",
-        "created": format_date(datetime.datetime.utcnow() - datetime.timedelta(seconds=8)),
+        "created": format_date(
+            datetime.datetime.utcnow() - datetime.timedelta(seconds=8)
+        ),
     }
 
     global signed_hash

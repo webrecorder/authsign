@@ -143,5 +143,3 @@ def on_exit(server):
         os.rmdir(os.path.join(tempfile.gettempdir(), RENEW_LOCK_NAME))
     except:
         pass
-
-
