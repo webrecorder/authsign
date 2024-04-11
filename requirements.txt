@@ -7,3 +7,4 @@ pyyaml
 acme
 pyasn1
 python-dateutil
+pydantic==1.10.13
