@@ -193,6 +193,7 @@ class Signer:
             self.update_signing_key_and_cert()
 
         if not self.domain_signing:
+            # pylint: disable=broad-exception-raised
             raise Exception("Could not load domain signing cert + keys")
 
         self.timestampers = [Timestamper(**ts_data) for ts_data in timestamping]
@@ -312,6 +313,7 @@ class Signer:
                 timestamp - self.stamp_duration, timestamp, created
             )
             print(msg)
+            # pylint: disable=broad-exception-raised
             raise Exception(msg)
 
         return SignedHash(
