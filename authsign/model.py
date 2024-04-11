@@ -1,6 +1,6 @@
 """ Models for api """
 
-from typing import Optional
+from typing import Optional, ClassVar
 from datetime import datetime
 
 from pydantic import BaseModel, validator
@@ -30,7 +30,7 @@ class SignReq(BaseModel):
 class SignedHash(SignReq):
     """Signed Hash of the SignReq, created by signer, ready for verification"""
 
-    version = "0.1.0"
+    version: ClassVar[str] = "0.1.0"
 
     software: Optional[str]
 
