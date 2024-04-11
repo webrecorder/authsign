@@ -134,7 +134,7 @@ def test_sign_invalid_token(domain, config_file):
     req = {"hash": "some_data", "created": now}
 
     with TestClient(app) as client:
-        resp = client.request("POST", "/sign", data=req)
+        resp = client.request("POST", "/sign", json=req)
         assert resp.status_code == 403
 
         resp = client.request(
@@ -143,7 +143,7 @@ def test_sign_invalid_token(domain, config_file):
             headers={
                 "Authorization": "bearer " + base64.b64encode(b"abc").decode("ascii")
             },
-            data=req,
+            json=req,
         )
         assert resp.status_code == 403
 
