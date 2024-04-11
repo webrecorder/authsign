@@ -9,3 +9,4 @@ pyasn1
 python-dateutil
 pydantic==1.10.13
 httpx>=0.22.0
+h11<0.13,>=0.11
