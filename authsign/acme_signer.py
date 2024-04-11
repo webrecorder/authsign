@@ -85,6 +85,7 @@ class AcmeSigner:
                 if isinstance(i.chall, challenges.HTTP01):
                     return i
 
+        # pylint: disable=broad-exception-raised
         raise Exception("HTTP-01 challenge was not offered by the CA server.")
 
     @contextmanager

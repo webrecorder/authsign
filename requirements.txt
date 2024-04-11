@@ -1,9 +1,12 @@
 cryptography
 rfc3161ng
 pem
-fastapi
+fastapi==0.110.1
 uvicorn
 pyyaml
 acme
 pyasn1
 python-dateutil
+pydantic==1.10.13
+httpx>=0.22.0,<1.0
+h11<0.15,>=0.13

@@ -30,7 +30,7 @@ class SignReq(BaseModel):
 class SignedHash(SignReq):
     """Signed Hash of the SignReq, created by signer, ready for verification"""
 
-    version = "0.1.0"
+    version: str = "0.1.0"
 
     software: Optional[str]
 

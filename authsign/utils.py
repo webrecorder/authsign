@@ -44,6 +44,7 @@ def format_date(date):
 @contextlib.contextmanager
 def open_file(filename_or_resource, mode):
     """open file from either package or file system"""
+    # pylint: disable=deprecated-method
     res = None
     if filename_or_resource.startswith("pkg://"):
         pkg, resource = filename_or_resource[6:].split("/", 1)
