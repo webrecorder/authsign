@@ -1,6 +1,5 @@
 """ Verify signed responses api"""
 
-
 import base64
 import traceback
 

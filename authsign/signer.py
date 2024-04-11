@@ -1,6 +1,7 @@
 """
 Generate or load certs and handle signing
 """
+
 from pathlib import Path
 
 import datetime
