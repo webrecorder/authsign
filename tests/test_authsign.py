@@ -155,7 +155,7 @@ def test_sign_valid_token(domain, config_file):
     global signed_hash
     with TestClient(app) as client:
         resp = client.request(
-            "POST", "/sign", headers={"Authorization": "bearer " + auth_token}, data=req
+            "POST", "/sign", headers={"Authorization": "bearer " + auth_token}, json=req
         )
         signed_hash = resp.json()
         print(signed_hash)
@@ -191,7 +191,7 @@ def test_sign_valid_token_a_few_mins_ago(domain, config_file):
 
     with TestClient(app) as client:
         resp = client.request(
-            "POST", "/sign", headers={"Authorization": "bearer " + auth_token}, data=req
+            "POST", "/sign", headers={"Authorization": "bearer " + auth_token}, json=req
         )
         assert resp.status_code == 200
 
@@ -207,7 +207,7 @@ def test_sign_valid_token_wrong_date_too_early(domain, config_file):
     global signed_hash
     with TestClient(app) as client:
         resp = client.request(
-            "POST", "/sign", headers={"Authorization": "bearer " + auth_token}, data=req
+            "POST", "/sign", headers={"Authorization": "bearer " + auth_token}, json=req
         )
         assert resp.status_code == 400
 
@@ -223,7 +223,7 @@ def test_sign_valid_token_bad_date_in_future(domain, config_file):
     global signed_hash
     with TestClient(app) as client:
         resp = client.request(
-            "POST", "/sign", headers={"Authorization": "bearer " + auth_token}, data=req
+            "POST", "/sign", headers={"Authorization": "bearer " + auth_token}, json=req
         )
         assert resp.status_code == 400
 
@@ -232,7 +232,7 @@ def test_verify_invalid_missing(domain, config_file):
     with TestClient(app) as client:
         req = signed_hash.copy()
         req.pop("timeSignature", "")
-        resp = client.request("POST", "/verify", data=req)
+        resp = client.request("POST", "/verify", json=req)
         assert resp.status_code == 422
 
 
@@ -240,7 +240,7 @@ def test_verify_invalid_hash(domain, config_file):
     with TestClient(app) as client:
         req = signed_hash.copy()
         req["hash"] = "other data"
-        resp = client.request("POST", "/verify", data=req)
+        resp = client.request("POST", "/verify", json=req)
         assert resp.status_code == 400
 
 
@@ -248,7 +248,7 @@ def test_verify_wrong_cert(domain, config_file):
     with TestClient(app) as client:
         req = signed_hash.copy()
         req["timestampCert"] = req["domainCert"]
-        resp = client.request("POST", "/verify", data=req)
+        resp = client.request("POST", "/verify", json=req)
         assert resp.status_code == 400
 
 
@@ -256,7 +256,7 @@ def test_verify_wrong_cross_signed_cert(domain, config_file):
     with TestClient(app) as client:
         req = signed_hash.copy()
         req["crossSignedCert"] = req["timestampCert"]
-        resp = client.request("POST", "/verify", data=req)
+        resp = client.request("POST", "/verify", json=req)
         assert resp.status_code == 400
 
 
@@ -265,7 +265,7 @@ def test_verify_invalid_bad_date(domain, config_file):
         # date to early
         req = signed_hash.copy()
         req["created"] = "abc"
-        resp = client.request("POST", "/verify", data=req)
+        resp = client.request("POST", "/verify", json=req)
         assert resp.status_code == 422
 
 
@@ -276,7 +276,7 @@ def test_verify_invalid_date_out_of_range(domain, config_file):
         req["created"] = format_date(
             datetime.datetime.utcnow() - datetime.timedelta(days=1)
         )
-        resp = client.request("POST", "/verify", data=req)
+        resp = client.request("POST", "/verify", json=req)
         assert resp.status_code == 400
 
         # date to late
@@ -284,13 +284,13 @@ def test_verify_invalid_date_out_of_range(domain, config_file):
         req["created"] = format_date(
             datetime.datetime.utcnow() + datetime.timedelta(days=1)
         )
-        resp = client.request("POST", "/verify", data=req)
+        resp = client.request("POST", "/verify", json=req)
         assert resp.status_code == 400
 
 
 def test_verify_valid(domain, config_file):
     with TestClient(app) as client:
-        resp = client.request("POST", "/verify", data=signed_hash)
+        resp = client.request("POST", "/verify", json=signed_hash)
         assert resp.status_code == 200
         res = resp.json()
         assert res["observer"] == domain
