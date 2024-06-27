@@ -116,10 +116,10 @@ class Verifier:
             log_assert(created, "Parsed signature date")
 
             log_assert(
-                cert.not_valid_before
+                cert.not_valid_before_utc
                 <= created
-                <= cert.not_valid_before + self.cert_duration,
-                f"Verify creation date '{created}' - cert creation date '{cert.not_valid_before}' <= '{self.cert_duration}'",
+                <= cert.not_valid_before_utc + self.cert_duration,
+                f"Verify creation date '{created}' - cert creation date '{cert.not_valid_before_utc}' <= '{self.cert_duration}'",
             )
 
             timestamp = self.timestamp_verify(

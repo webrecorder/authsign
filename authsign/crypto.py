@@ -49,7 +49,7 @@ def create_signed_cert(csr, ca_cert, private_ca_key, start_date, end_date):
         .issuer_name(ca_cert.issuer)
         .public_key(csr.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(start_date)
+        .not_valid_before_utc(start_date)
         .not_valid_after(end_date)
     )
 
