@@ -17,8 +17,14 @@ signing:
   timestamping:
     # time server cert chain (cert + ca cert)
     # pkg:// url to load from python package data
-    - certfile: pkg://authsign.trusted/ts-chain.pem
-      url: http://freetsa.org/tsr  # timeserver URL
+
+    # recommended: use DigiCert timestamp service
+    - certfile: pkg://authsign.trusted/ts-digicert.pem
+      url: http://timestamp.digicert.com/
+
+    # from FreeTSA
+    #- certfile: pkg://authsign.trusted/ts-chain.pem
+    #  url: http://freetsa.org/tsr  # timeserver URL
 
 
 # default certificate rotation time
