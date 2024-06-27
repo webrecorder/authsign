@@ -66,3 +66,8 @@ def load_yaml(filename):
         data = yaml.load(fh.read(), Loader=yaml.SafeLoader)
 
     return data
+
+
+def dt_now():
+    """timezone aware now()"""
+    return datetime.datetime.now(datetime.timezone.utc)

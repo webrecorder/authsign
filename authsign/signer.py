@@ -25,6 +25,7 @@ from authsign.utils import (
     YEARS,
     no_older_then,
     open_file,
+    dt_now,
 )
 
 from authsign.log import log_assert, log_message, log_failure, log_success
@@ -91,7 +92,7 @@ class CertKeyPair:
             data = fh_in.read()
             self.private_key = crypto.load_private_key(data, passphrase)
 
-        now = datetime.datetime.utcnow()
+        now = dt_now()
 
         log_assert(self.test_keys("Data Signature Test"), "Validating key pair")
 
@@ -243,7 +244,7 @@ class Signer:
                 cert.not_valid_before_utc, next_update
             )
         )
-        next_update = (next_update - datetime.datetime.utcnow()).total_seconds()
+        next_update = (next_update - dt_now()).total_seconds()
         self.next_update = next_update
 
     def save_key_pair_and_cert(self):
@@ -287,7 +288,7 @@ class Signer:
             return
 
         if self.csca_signing:
-            now = datetime.datetime.utcnow()
+            now = dt_now()
 
             cs_cert = crypto.create_signed_cert(
                 csr,
