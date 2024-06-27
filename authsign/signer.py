@@ -309,6 +309,8 @@ class Signer:
 
         time_signature, timestamp = timestamper(signature)
 
+        timestamp = timestamp.replace(tzinfo=datetime.timezone.utc)
+
         # truncate microseconds, as timestamp server rounds down to closest second
         created = sign_req.created.replace(microsecond=0)
 
