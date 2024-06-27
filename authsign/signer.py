@@ -306,7 +306,8 @@ class Signer:
 
         time_signature, timestamp = timestamper(signature)
 
-        created = sign_req.created
+        # truncate microseconds, as timestamp server rounds down to closest second
+        created = sign_req.created.replace(microsecond=0)
 
         if not no_older_then(created, timestamp, self.stamp_duration):
             msg = "Created timestamp is out of range: Must be between between {0} and {1}, but is {2}".format(
@@ -319,7 +320,7 @@ class Signer:
         return SignedHash(
             software="authsigner " + __version__,
             hash=sign_req.hash,
-            created=created,
+            created=sign_req.created,
             signature=signature,
             timeSignature=time_signature,
             domain=self.domain,
