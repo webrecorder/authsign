@@ -33,7 +33,7 @@ def parse_date(datestr):
     if isinstance(datestr, datetime.datetime):
         return datestr
 
-    return dateutil.parser.parse(datestr, ignoretz=True)
+    return dateutil.parser.parse(datestr)
 
 
 def format_date(date):
