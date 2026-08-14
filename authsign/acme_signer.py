@@ -14,7 +14,6 @@ from acme import client
 from acme import messages
 from acme import standalone
 
-
 USER_AGENT = "acme-signer"
 
 ACME_STAGING_URL = "https://acme-staging-v02.api.letsencrypt.org/directory"

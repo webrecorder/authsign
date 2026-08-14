@@ -1,4 +1,4 @@
-""" main entrypoint for authsign web server """
+"""main entrypoint for authsign web server"""
 
 import asyncio
 import os
@@ -13,7 +13,6 @@ from authsign.model import SignedHash, SignReq
 from authsign.utils import load_yaml, CERT_DURATION, STAMP_DURATION
 
 from authsign.log import log_message, log_failure
-
 
 # loop = asyncio.get_event_loop()
 app = FastAPI()
