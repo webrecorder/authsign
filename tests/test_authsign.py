@@ -9,7 +9,6 @@ import requests
 
 from fastapi.testclient import TestClient
 
-
 CONFIG_WO_CS = os.path.join(os.path.dirname(__file__), "test_config.yaml")
 CONFIG_WITH_CS = os.path.join(os.path.dirname(__file__), "test_config_with_cs.yaml")
 
