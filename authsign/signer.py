@@ -14,7 +14,7 @@ from pyasn1.codec.der import encoder
 
 import rfc3161ng
 
-#pylint: disable=unused-import
+# pylint: disable=unused-import
 import authsign.patch_rfc3161ng
 
 from authsign import crypto, __version__
@@ -31,7 +31,6 @@ from authsign.utils import (
 )
 
 from authsign.log import log_assert, log_message, log_failure, log_success
-
 
 PASSPHRASE = b"passphrase"
 

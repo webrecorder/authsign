@@ -15,7 +15,6 @@ from authsign.utils import load_yaml, CERT_DURATION, STAMP_DURATION
 
 from authsign.log import log_message, log_failure
 
-
 # loop = asyncio.get_event_loop()
 app = FastAPI()
 
