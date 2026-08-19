@@ -19,20 +19,20 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: install test reqs
-        run: pip install -U pytest pytest-cov pytest-asyncio coverage black pip setuptools pylint
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+      - name: Install dependencies
+        run: uv sync --locked --dev --python ${{ matrix.python-version }}
 
       - name: Style Check
         run: |
-          black --check *.py
-          black --check authsign/*.py
-          black --check tests/*.py
-
-      - name: install
-        run: python setup.py install
+          uv run black --check *.py
+          uv run black --check authsign/*.py
+          uv run black --check tests/*.py
 
       - name: Lint Check
-        run: pylint --rcfile=pylint.ini authsign/
+        run: uv run pylint --rcfile=pylint.ini authsign/
 
       - name: run pebble in background
         run: docker run -e PEBBLE_WFE_NONCEREJECT=0 -d --network "host" letsencrypt/pebble
@@ -41,4 +41,4 @@ jobs:
         run: echo "127.0.0.1 localhost.test" | sudo tee -a /etc/hosts
 
       - name: run tests
-        run: py.test --domain localhost.test --maxfail 1
+        run: uv run py.test --domain localhost.test --maxfail 1
