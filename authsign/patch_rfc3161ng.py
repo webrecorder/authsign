@@ -24,7 +24,9 @@ def _patched_check_timestamp(
     from cryptography.hazmat.primitives import hashes
 
     try:
-        return _original_check_timestamp(tst, certificate, data, digest, hashname, nonce)
+        return _original_check_timestamp(
+            tst, certificate, data, digest, hashname, nonce
+        )
     except TypeError as e:
         if "positional arguments" not in str(e):
             raise
@@ -41,7 +43,11 @@ def _patched_check_timestamp(
     certificate = rfc3161ng.api.load_certificate(signed_data, certificate)
     signer_info = signed_data["signerInfos"][0]
 
-    content = bytes(decoder.decode(bytes(tst.content["contentInfo"]["content"]), asn1Spec=univ.OctetString())[0])
+    content = bytes(
+        decoder.decode(
+            bytes(tst.content["contentInfo"]["content"]), asn1Spec=univ.OctetString()
+        )[0]
+    )
 
     if len(signer_info["authenticatedAttributes"]):
         signer_digest_algorithm = signer_info["digestAlgorithm"]["algorithm"]
@@ -61,7 +67,9 @@ def _patched_check_timestamp(
     if isinstance(public_key, ec.EllipticCurvePublicKey):
         public_key.verify(signature, signed_data_bytes, ec.ECDSA(hash_family()))
     else:
-        public_key.verify(signature, signed_data_bytes, padding.PKCS1v15(), hash_family())
+        public_key.verify(
+            signature, signed_data_bytes, padding.PKCS1v15(), hash_family()
+        )
 
     return True
 

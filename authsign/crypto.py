@@ -1,4 +1,4 @@
-""" crypto utils"""
+"""crypto utils"""
 
 import base64
 import binascii

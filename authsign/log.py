@@ -1,4 +1,4 @@
-""" multicolored logging utils """
+"""multicolored logging utils"""
 
 import logging
 

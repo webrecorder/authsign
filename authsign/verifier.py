@@ -1,4 +1,4 @@
-""" Verify signed responses api"""
+"""Verify signed responses api"""
 
 import base64
 import traceback

@@ -1,4 +1,4 @@
-""" main entrypoint for authsign web server """
+"""main entrypoint for authsign web server"""
 
 import asyncio
 import os
