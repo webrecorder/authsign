@@ -34,7 +34,7 @@ jobs:
         run: uv run pylint --rcfile=pylint.ini authsign/
 
       - name: run pebble in background
-        run: docker run -e PEBBLE_WFE_NONCEREJECT=0 -d --network "host" letsencrypt/pebble
+        run: docker run -e PEBBLE_WFE_NONCEREJECT=0 -d --network "host" ghcr.io/letsencrypt/pebble:latest
 
       - name: add custom domain to /etc/hosts
         run: echo "127.0.0.1 localhost.test" | sudo tee -a /etc/hosts
