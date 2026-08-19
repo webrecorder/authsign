@@ -13,6 +13,8 @@ import traceback
 from pyasn1.codec.der import encoder
 
 import rfc3161ng
+
+#pylint: disable=unused-import
 import authsign.patch_rfc3161ng
 
 from authsign import crypto, __version__
@@ -62,7 +64,7 @@ class Timestamper:
 
 
 # ============================================================================
-# pylint: disable=too-many-instance-attributes,too-many-arguments
+# pylint: disable=too-many-instance-attributes,too-many-arguments,too-many-positional-arguments
 class CertKeyPair:
     """Loads a cert + private key from PEM, extracts public key from cert"""
 
