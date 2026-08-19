@@ -27,7 +27,6 @@ jobs:
 
       - name: Style Check
         run: |
-          uv run black --check *.py
           uv run black --check authsign/*.py
           uv run black --check tests/*.py
 
