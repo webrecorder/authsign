@@ -11,8 +11,9 @@ import asyncio
 import traceback
 
 from pyasn1.codec.der import encoder
-import rfc3161ng
 
+import rfc3161ng
+import authsign.patch_rfc3161ng
 
 from authsign import crypto, __version__
 
@@ -270,6 +271,8 @@ class Signer:
         csr_pem = crypto.get_as_pem(csr)
 
         log_message("Awaiting new cert for domain: " + self.domain)
+
+        log_message(f"Staging?: {self.staging}")
 
         signer = AcmeSigner(self.domain, self.email, self.port, self.staging)
 

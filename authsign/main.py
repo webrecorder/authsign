@@ -3,6 +3,7 @@
 import asyncio
 import os
 import datetime
+import traceback
 
 from fastapi import FastAPI, HTTPException, Header
 
@@ -87,7 +88,10 @@ async def sign_data(sign_req: SignReq, authorization: str = Header(None)):
     try:
         return signer(sign_req)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        detail = str(e)
+        if not detail:
+            detail = traceback.format_exc()
+        raise HTTPException(status_code=400, detail=detail)
 
 
 @app.post("/verify")
