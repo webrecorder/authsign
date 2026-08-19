@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
@@ -10,12 +10,12 @@ ADD authsign /app/authsign
 ADD README.md /app
 ADD log.json /app
 
-RUN pip install setuptools
+RUN pip install -r requirements.txt
 
-RUN python setup.py install
+RUN pip install setuptools && python setup.py install
 
 # override by using custom config.yaml, or setting the DOMAIN_OVERRIDE and EMAIL_OVERRIDE
 ADD config.sample.yaml config.yaml
 
-CMD uvicorn authsign.main:app --port 8080 --workers 1 --host 0.0.0.0 --log-config /app/log.json
+CMD ["uvicorn", "authsign.main:app", "--port", "8080", "--workers", "1", "--host", "0.0.0.0", "--log-config", "/app/log.json"]
 
