@@ -1,4 +1,4 @@
-FROM python:3.9
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -9,6 +9,8 @@ ADD authsign /app/authsign
 
 ADD README.md /app
 ADD log.json /app
+
+RUN pip install setuptools
 
 RUN python setup.py install
 
