@@ -89,7 +89,8 @@ async def sign_data(sign_req: SignReq, authorization: str = Header(None)):
     except Exception as e:
         detail = str(e)
         if not detail:
-            detail = traceback.format_exc()
+            # detail = traceback.format_exc()
+            log_failure(traceback.format_exc())
         raise HTTPException(status_code=400, detail=detail) from e
 
 
