@@ -79,5 +79,7 @@ def _patched_check_timestamp(
     return True
 
 
-rfc3161ng.check_timestamp = _patched_check_timestamp
-rfc3161ng.api.check_timestamp = _patched_check_timestamp
+def apply_patch():
+    """ apply monkey-patch to rfc3161ng """
+    rfc3161ng.check_timestamp = _patched_check_timestamp
+    rfc3161ng.api.check_timestamp = _patched_check_timestamp

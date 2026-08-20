@@ -14,8 +14,7 @@ from pyasn1.codec.der import encoder
 
 import rfc3161ng
 
-# pylint: disable=unused-import
-import authsign.patch_rfc3161ng
+from authsign.patch_rfc3161ng import apply_patch
 
 from authsign import crypto, __version__
 
@@ -35,6 +34,9 @@ from authsign.log import log_assert, log_message, log_failure, log_success
 PASSPHRASE = b"passphrase"
 
 renewing = False
+
+# patch rfc3161ng to be able to handle EC keys
+apply_patch()
 
 
 # ============================================================================
