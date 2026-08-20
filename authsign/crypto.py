@@ -1,4 +1,4 @@
-""" crypto utils"""
+"""crypto utils"""
 
 import base64
 import binascii
@@ -38,7 +38,7 @@ def create_csr(domain, private_key):
 
 def get_as_pem(csr):
     """Convert a csr or cert object to PEM"""
-    return csr.public_bytes(serialization.Encoding.PEM).decode("ascii")
+    return csr.public_bytes(serialization.Encoding.PEM)
 
 
 def create_signed_cert(csr, ca_cert, private_ca_key, start_date, end_date):

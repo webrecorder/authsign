@@ -1,8 +1,9 @@
-""" main entrypoint for authsign web server """
+"""main entrypoint for authsign web server"""
 
 import asyncio
 import os
 import datetime
+import traceback
 
 from fastapi import FastAPI, HTTPException, Header
 
@@ -13,7 +14,6 @@ from authsign.model import SignedHash, SignReq
 from authsign.utils import load_yaml, CERT_DURATION, STAMP_DURATION
 
 from authsign.log import log_message, log_failure
-
 
 # loop = asyncio.get_event_loop()
 app = FastAPI()
@@ -87,7 +87,10 @@ async def sign_data(sign_req: SignReq, authorization: str = Header(None)):
     try:
         return signer(sign_req)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        detail = str(e)
+        if not detail:
+            detail = traceback.format_exc()
+        raise HTTPException(status_code=400, detail=detail) from e
 
 
 @app.post("/verify")

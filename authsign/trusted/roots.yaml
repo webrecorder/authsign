@@ -3,8 +3,17 @@
 
 
 domain_cert_roots:
-  # Lets Encrypt Root CA X3 
+  # Lets Encrypt Root CA X1
+  - 96bcec06264976f37460779acf28c5a7cfe8a3c0aae11a8ffcee05c0bddf08c6
+
+  # Lets Encrypt Root CA X2 
+  - 69729b8e15a86efc177a57afb7171dfc64add28c2fca8cf1507e34453ccb1470
+
+  # Lets Encrypt Root CA X3 (Expired)
   - 6d99fb265eb1c5b3744765fcbc648f3cd8e1bffafdc4c2f99b9d47cf7ff1c24f
+
+  # Lets Encrypt ISRG Root X1 Cross-Signed
+  - ee5f7abd6981bb0255632cd8f49283451b4b18844d12040b44ee00f07b8fe2c6
 
   # staging -- disabled for production
   # Lets Encrypt Staging (Pretend Pear X1)
@@ -12,6 +21,7 @@ domain_cert_roots:
 
   # Lets Encrypt Staging (Bogus Broccoli X2)
   #- 32d21af6fc87417a55d7e23c6992b8ce0cb9b5fcd85da30d194156d53758e4c5
+  #- 52466444a33b2e6f2194b703455efa01541783079c3c04a541fff485de978aa9
 
 timestamp_cert_roots:
   # freetsa.org Root CA (self-signed)

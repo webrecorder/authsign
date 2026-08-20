@@ -11,8 +11,10 @@ import asyncio
 import traceback
 
 from pyasn1.codec.der import encoder
+
 import rfc3161ng
 
+from authsign.patch_rfc3161ng import apply_patch
 
 from authsign import crypto, __version__
 
@@ -29,10 +31,12 @@ from authsign.utils import (
 
 from authsign.log import log_assert, log_message, log_failure, log_success
 
-
 PASSPHRASE = b"passphrase"
 
 renewing = False
+
+# patch rfc3161ng to be able to handle EC keys
+apply_patch()
 
 
 # ============================================================================
@@ -61,7 +65,7 @@ class Timestamper:
 
 
 # ============================================================================
-# pylint: disable=too-many-instance-attributes,too-many-arguments
+# pylint: disable=too-many-instance-attributes,too-many-arguments,too-many-positional-arguments
 class CertKeyPair:
     """Loads a cert + private key from PEM, extracts public key from cert"""
 
@@ -270,6 +274,8 @@ class Signer:
         csr_pem = crypto.get_as_pem(csr)
 
         log_message("Awaiting new cert for domain: " + self.domain)
+
+        log_message(f"Staging?: {self.staging}")
 
         signer = AcmeSigner(self.domain, self.email, self.port, self.staging)
 

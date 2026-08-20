@@ -1,4 +1,4 @@
-""" Verify signed responses api"""
+"""Verify signed responses api"""
 
 import base64
 import traceback
@@ -15,7 +15,6 @@ from authsign.utils import (
 from authsign import crypto
 from authsign.log import log_assert, log_message, debug_error
 from authsign.model import SignedHash
-
 
 DEFAULT_TRUSTED_ROOTS = "pkg://authsign.trusted/roots.yaml"
 

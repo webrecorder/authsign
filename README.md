@@ -22,7 +22,7 @@ The key and the cert(s) are rotated every 48 hours.
 
 Signing is done by making a POST request to `/sign` containing the data to sign and the creation date.
 
-The data is POSTed as JSON ojbect: `{"hash": "...", "created": "..."}`
+The data is POSTed as JSON object: `{"hash": "...", "created": "..."}`
 
 ### Auth Token
 

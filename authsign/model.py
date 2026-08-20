@@ -1,4 +1,4 @@
-""" Models for api """
+"""Models for api"""
 
 from typing import Optional
 from datetime import datetime
