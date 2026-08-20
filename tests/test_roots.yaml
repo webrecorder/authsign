@@ -16,4 +16,5 @@ timestamp_cert_roots:
   # freetsa.org Root CA (self-signed)
   - a6379e7cecc05faa3cbf076013d745e327bbbaa38c0b9af22469d4701d18aabc
 
-
+  # DigiCert Root CA (DigiCertTrustedRootG4.cer)
+  - 33846b545a49c9be4903c60e01713c1bd4e4ef31ea65cd95d69e62794f30b941
