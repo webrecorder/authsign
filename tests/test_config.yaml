@@ -14,8 +14,13 @@ signing:
   timestamping:
     # time server cert chain (cert + ca cert)
     # pkg:// url to load from python package data
-    - certfile: pkg://authsign.trusted/ts-chain.pem
-      url: http://freetsa.org/tsr  # timeserver URL
+    #- certfile: pkg://authsign.trusted/ts-chain.pem
+    #  url: http://freetsa.org/tsr  # timeserver URL
+
+    # recommended: use DigiCert timestamp service
+    - certfile: pkg://authsign.trusted/ts-digicert.pem
+      url: http://timestamp.digicert.com
+
 
 # load test roots
 trusted_roots: ./tests/_out_test_roots.yaml

@@ -22,7 +22,7 @@ signing:
     - certfile: pkg://authsign.trusted/ts-digicert.pem
       url: http://timestamp.digicert.com/
 
-    # from FreeTSA
+    # other option: FreeTSA
     #- certfile: pkg://authsign.trusted/ts-chain.pem
     #  url: http://freetsa.org/tsr  # timeserver URL
 
