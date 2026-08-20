@@ -32,12 +32,12 @@ class SignedHash(SignReq):
 
     version: str = "0.1.0"
 
-    software: Optional[str]
+    software: Optional[str] = ""
 
     signature: str
     domain: str
     domainCert: str
-    crossSignedCert: Optional[str]
+    crossSignedCert: Optional[str] = None
 
     timeSignature: str
     timestampCert: str
