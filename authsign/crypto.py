@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 
 from cryptography import x509
-from cryptography.x509.oid import NameOID
+from cryptography.x509.oid import NameOID, ExtensionOID
 
 import pem
 
@@ -62,9 +62,20 @@ def load_cert(cert_pem):
 
 
 def get_cert_subject_name(cert):
-    """Get the subject name (domain) from a cert"""
-    return cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+    """Get the subject name (domain) from a cert, using either CN or SAN Extension"""
+    cn_attrs = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+    if cn_attrs:
+        return cn_attrs[0].value
 
+    try:
+        san = cert.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
+        domains = san.value.get_values_for_type(x509.DNSName)
+        if domains:
+            return domains[0]
+    except x509.ExtensionNotFound:
+        pass
+
+    return ""
 
 def get_fingerprint(cert):
     """Get the cert fingerprint as SHA-256 hex string"""

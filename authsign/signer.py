@@ -262,7 +262,7 @@ class Signer:
 
         if self.cs_cert_pem:
             log_message("Saving: " + str(self.rootpath / "cs-cert.pem"))
-            with open(self.rootpath / "cs-cert.pem", "wt") as fh_out:
+            with open(self.rootpath / "cs-cert.pem", "wb") as fh_out:
                 fh_out.write(self.cs_cert_pem)
 
     def update_signing_key_and_cert(self):
