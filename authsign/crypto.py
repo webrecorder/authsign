@@ -68,7 +68,9 @@ def get_cert_subject_name(cert):
         return cn_attrs[0].value
 
     try:
-        san = cert.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
+        san = cert.extensions.get_extension_for_oid(
+            ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+        )
         domains = san.value.get_values_for_type(x509.DNSName)
         if domains:
             return domains[0]
@@ -76,6 +78,7 @@ def get_cert_subject_name(cert):
         pass
 
     return ""
+
 
 def get_fingerprint(cert):
     """Get the cert fingerprint as SHA-256 hex string"""
