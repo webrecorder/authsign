@@ -90,7 +90,7 @@ async def sign_data(sign_req: SignReq, authorization: str = Header(None)):
         detail = str(e)
         if not detail:
             detail = traceback.format_exc()
-        raise HTTPException(status_code=400, detail=detail)
+        raise HTTPException(status_code=400, detail=detail) from e
 
 
 @app.post("/verify")
