@@ -1,6 +1,6 @@
 [project]
 name = "authsign"
-version = "0.6.0b0"
+version = "0.6.0b1"
 description = "Authenticating Data Signing + Verification Server"
 readme = "README.md"
 authors = [
