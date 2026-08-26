@@ -1,0 +1,28 @@
+name: Generate Draft Release
+
+on:
+  push:
+    branches:
+      - main
+      - "*-release"
+
+jobs:
+  package_chart:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v7
+
+      - name: Get Version
+        run: |
+          echo "$(grep 'version =' < pyproject.toml | tr -d ' ')" >> "$GITHUB_ENV"
+
+      - name: Make Draft Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: "authsign ${{ env.version }}"
+          tag_name: ${{ env.version }}
+          draft: true
+          generate_release_notes: true
+          append_body: false
