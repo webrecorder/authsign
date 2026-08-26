@@ -16,7 +16,7 @@ jobs:
 
       - name: Get Version
         run: |
-          echo "$(grep 'version =' < pyproject.toml | tr -d ' ')" >> "$GITHUB_ENV"
+          echo "$(grep 'version =' < pyproject.toml | tr -d ' "')" >> "$GITHUB_ENV"
 
       - name: Make Draft Release
         uses: softprops/action-gh-release@v3
