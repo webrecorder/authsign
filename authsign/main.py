@@ -18,8 +18,8 @@ from authsign.log import log_message, log_failure
 # loop = asyncio.get_event_loop()
 app = FastAPI()
 
-signer = None
-verifier = None
+signer: Signer | None = None
+verifier: Verifier | None = None
 
 
 @app.on_event("startup")
@@ -42,7 +42,7 @@ async def load_certs():
         config["signing"]["data"] = os.environ.get("DATA_OVERRIDE")
 
     if os.environ.get("PORT_OVERRIDE"):
-        config["signing"]["port"] = int(os.environ.get("PORT_OVERRIDE"))
+        config["signing"]["port"] = int(os.environ.get("PORT_OVERRIDE", ""))
 
     if os.environ.get("AUTH_TOKEN"):
         config["signing"]["auth_token"] = os.environ.get("AUTH_TOKEN")
@@ -79,6 +79,9 @@ async def load_certs():
 @app.post("/sign", response_model=SignedHash, response_model_exclude_none=True)
 async def sign_data(sign_req: SignReq, authorization: str = Header(None)):
     """sign data api"""
+    if not signer:
+        raise ValueError("No signer defined!")
+
     log_message("Signing Request...")
     if not signer.validate_token(authorization):
         log_failure("Invalid Auth Token")
@@ -96,6 +99,9 @@ async def sign_data(sign_req: SignReq, authorization: str = Header(None)):
 @app.post("/verify")
 async def verify_data(signed_hash: SignedHash):
     """verify data api"""
+    if not verifier:
+        raise ValueError("No verifier defined!")
+
     log_message("Verifying Signed Request...")
 
     try:
