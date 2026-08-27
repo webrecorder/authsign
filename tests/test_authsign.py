@@ -134,7 +134,7 @@ def test_reload_same_cert(domain, config_file):
 
 
 def test_sign_invalid_token(domain, config_file):
-    now = format_date(datetime.datetime.utcnow())
+    now = format_date(datetime.datetime.now(datetime.UTC))
     req = {"hash": "some_data", "created": now}
 
     with TestClient(app) as client:
@@ -153,7 +153,7 @@ def test_sign_invalid_token(domain, config_file):
 
 
 def test_sign_valid_token(domain, config_file):
-    now = format_date(datetime.datetime.utcnow())
+    now = format_date(datetime.datetime.now(datetime.UTC))
     req = {"hash": "some_data", "created": now}
 
     global signed_hash
@@ -190,7 +190,9 @@ def test_sign_valid_token(domain, config_file):
 
 
 def test_sign_valid_token_a_few_mins_ago(domain, config_file):
-    now = format_date(datetime.datetime.utcnow() - datetime.timedelta(minutes=5))
+    now = format_date(
+        datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=5)
+    )
     req = {"hash": "some_data", "created": now}
 
     with TestClient(app) as client:
@@ -204,7 +206,7 @@ def test_sign_valid_token_wrong_date_too_early(domain, config_file):
     req = {
         "hash": "some_data",
         "created": format_date(
-            datetime.datetime.utcnow() - datetime.timedelta(minutes=11)
+            datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=11)
         ),
     }
 
@@ -220,7 +222,7 @@ def test_sign_valid_token_bad_date_in_future(domain, config_file):
     req = {
         "hash": "some_data",
         "created": format_date(
-            datetime.datetime.utcnow() + datetime.timedelta(seconds=30)
+            datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=30)
         ),
     }
 
@@ -278,7 +280,7 @@ def test_verify_invalid_date_out_of_range(domain, config_file):
         # date to early
         req = signed_hash.copy()
         req["created"] = format_date(
-            datetime.datetime.utcnow() - datetime.timedelta(days=1)
+            datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
         )
         resp = client.request("POST", "/verify", json=req)
         assert resp.status_code == 400
@@ -286,7 +288,7 @@ def test_verify_invalid_date_out_of_range(domain, config_file):
         # date to late
         req = signed_hash.copy()
         req["created"] = format_date(
-            datetime.datetime.utcnow() + datetime.timedelta(days=1)
+            datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=1)
         )
         resp = client.request("POST", "/verify", json=req)
         assert resp.status_code == 400

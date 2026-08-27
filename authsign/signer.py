@@ -62,7 +62,7 @@ class Timestamper:
 
         pem = crypto.get_pem_from_tst(tst)
 
-        return base64.b64encode(result), rfc3161ng.get_timestamp(tst), pem
+        return base64.b64encode(result), rfc3161ng.get_timestamp(tst, naive=False), pem
 
 
 # ============================================================================
@@ -98,13 +98,15 @@ class CertKeyPair:
             data = fh_in.read()
             self.private_key = crypto.load_private_key(data, passphrase)
 
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.UTC)
 
         log_assert(self.test_keys("Data Signature Test"), "Validating key pair")
 
         log_assert(
-            self.cert.not_valid_before <= now <= self.cert.not_valid_before + duration
-            and now <= self.cert.not_valid_after,
+            self.cert.not_valid_before_utc
+            <= now
+            <= self.cert.not_valid_before_utc + duration
+            and now <= self.cert.not_valid_after_utc,
             "Validating cert still valid",
         )
 
@@ -244,13 +246,15 @@ class Signer:
 
     def set_next_update_time(self, cert):
         """store the time for next cert renew"""
-        next_update = cert.not_valid_before + self.cert_duration
+        next_update = cert.not_valid_before_utc + self.cert_duration
         log_message(
             "Certificate will be used from {0} to {1}".format(
-                cert.not_valid_before, next_update
+                cert.not_valid_before_utc, next_update
             )
         )
-        next_update = (next_update - datetime.datetime.utcnow()).total_seconds()
+        next_update = (
+            next_update - datetime.datetime.now(datetime.UTC)
+        ).total_seconds()
         self.next_update = next_update
 
     def save_key_pair_and_cert(self):
@@ -300,7 +304,7 @@ class Signer:
             return
 
         if self.csca_signing:
-            now = datetime.datetime.utcnow()
+            now = datetime.datetime.now(datetime.UTC)
 
             cs_cert = crypto.create_signed_cert(
                 csr,

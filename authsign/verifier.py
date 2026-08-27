@@ -61,7 +61,7 @@ class Verifier:
             debug_error(traceback.format_exc())
             return None
 
-        return rfc3161ng.get_timestamp(tst)
+        return rfc3161ng.get_timestamp(tst, naive=False)
 
     def check_fingerprint(self, cert, trusted, name):
         """Check if cert fingerprint matches one of trusted fingerprints (sha-256 hashes)"""
@@ -119,10 +119,10 @@ class Verifier:
             log_assert(created, "Parsed signature date")
 
             log_assert(
-                cert.not_valid_before
+                cert.not_valid_before_utc
                 <= created
-                <= cert.not_valid_before + self.cert_duration,
-                f"Verify creation date '{created}' - cert creation date '{cert.not_valid_before}' <= '{self.cert_duration}'",
+                <= cert.not_valid_before_utc + self.cert_duration,
+                f"Verify creation date '{created}' - cert creation date '{cert.not_valid_before_utc}' <= '{self.cert_duration}'",
             )
 
             timestamp = self.timestamp_verify(
