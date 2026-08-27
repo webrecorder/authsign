@@ -26,7 +26,6 @@ from authsign.utils import (
     STAMP_DURATION,
     YEARS,
     no_older_then,
-    open_file,
 )
 
 from authsign.log import log_assert, log_message, log_failure, log_success
@@ -44,13 +43,9 @@ apply_patch()
 class Timestamper:
     """handle rfc3161 timestamp signing"""
 
-    def __init__(self, certfile=None, url=None):
-        self.cert_pem = None
-        with open_file(certfile, "rb") as fh_in:
-            self.cert_pem = fh_in.read()
-
+    def __init__(self, url=None, **_kwargs):
         self._timestamper = rfc3161ng.RemoteTimestamper(
-            url, certificate=self.cert_pem, hashname="sha256"
+            url, certificate=b"", hashname="sha256", include_tsa_certificate=True
         )
 
     def __call__(self, text):
@@ -61,7 +56,9 @@ class Timestamper:
 
         result = encoder.encode(tsr)
 
-        return base64.b64encode(result), rfc3161ng.get_timestamp(tst)
+        pem = crypto.get_pem_from_tst(tst)
+
+        return base64.b64encode(result), rfc3161ng.get_timestamp(tst), pem
 
 
 # ============================================================================
@@ -322,7 +319,7 @@ class Signer:
 
         timestamper = random.choice(self.timestampers)
 
-        time_signature, timestamp = timestamper(signature)
+        time_signature, timestamp, ts_pem = timestamper(signature)
 
         # truncate microseconds, as timestamp server rounds down to closest second
         created = sign_req.created.replace(microsecond=0)
@@ -343,7 +340,7 @@ class Signer:
             timeSignature=time_signature,
             domain=self.domain,
             domainCert=self.domain_signing.cert_pem,
-            timestampCert=timestamper.cert_pem,
+            timestampCert=ts_pem,
             crossSignedCert=self.cs_cert_pem,
         )
 

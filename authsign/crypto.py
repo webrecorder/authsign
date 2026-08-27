@@ -13,6 +13,8 @@ from cryptography.hazmat.backends import default_backend
 from cryptography import x509
 from cryptography.x509.oid import NameOID, ExtensionOID
 
+from pyasn1.codec.der import encoder
+
 import pem
 
 from authsign.log import debug_error
@@ -36,9 +38,9 @@ def create_csr(domain, private_key):
     return builder.sign(private_key, hashes.SHA256(), backend=default_backend())
 
 
-def get_as_pem(csr):
+def get_as_pem(csr_or_cert):
     """Convert a csr or cert object to PEM"""
-    return csr.public_bytes(serialization.Encoding.PEM)
+    return csr_or_cert.public_bytes(serialization.Encoding.PEM)
 
 
 def create_signed_cert(csr, ca_cert, private_ca_key, start_date, end_date):
@@ -179,3 +181,16 @@ def validate_cert_chain(cert_pem):
         prev_cert = cert
 
     return certs
+
+
+def get_pem_from_tst(tst) -> str:
+    """extract the certs from TST token. Must be called with include_tas_certificates=true"""
+    pem_str = ""
+    certs = tst["content"]["certificates"]
+
+    for cert in certs:
+        der = encoder.encode(cert)
+        cert = x509.load_der_x509_certificate(der)
+        pem_str += get_as_pem(cert).decode("ascii")
+
+    return pem_str
