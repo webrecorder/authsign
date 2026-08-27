@@ -44,6 +44,10 @@ class Timestamper:
     """handle rfc3161 timestamp signing"""
 
     def __init__(self, url=None, **_kwargs):
+        # passing include_tsa_certificate=True ensures the server returns the
+        # cert chain, instead of passing one in.
+        # certificate=b"" is necessary to avoid exception due to empty cert, see:
+        # https://codeberg.org/elbosso/rfc3161timestampingserver#python-client
         self._timestamper = rfc3161ng.RemoteTimestamper(
             url, certificate=b"", hashname="sha256", include_tsa_certificate=True
         )
