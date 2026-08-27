@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, padding
 # See https://github.com/trbs/rfc3161ng/issues/26#issue-4244967580 for more details
 
 
-_original_check_timestamp = rfc3161ng.check_timestamp
+_original_check_timestamp = None
 
 
 def _patched_check_timestamp(
@@ -81,5 +81,13 @@ def _patched_check_timestamp(
 
 def apply_patch():
     """apply monkey-patch to rfc3161ng"""
+    global _original_check_timestamp
+
+    # already patched
+    if _original_check_timestamp:
+        return
+
+    _original_check_timestamp = rfc3161ng.check_timestamp
+
     rfc3161ng.check_timestamp = _patched_check_timestamp
     rfc3161ng.api.check_timestamp = _patched_check_timestamp
