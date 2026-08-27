@@ -5,6 +5,7 @@ import os
 import datetime
 import traceback
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Header
 
 from authsign.signer import Signer
@@ -15,14 +16,20 @@ from authsign.utils import load_yaml, CERT_DURATION, STAMP_DURATION
 
 from authsign.log import log_message, log_failure
 
-# loop = asyncio.get_event_loop()
-app = FastAPI()
-
 signer: Signer | None = None
 verifier: Verifier | None = None
 
 
-@app.on_event("startup")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """load certs before starting FastAPI app"""
+    await load_certs()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
+
+
 async def load_certs():
     """load existing certs or request new ones if expired don't exist"""
     configfile = os.environ.get("CONFIG", "config.yaml")
