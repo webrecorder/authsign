@@ -87,6 +87,8 @@ class CertKeyPair:
         with open(certfile, "rb") as fh_in:
             self.set_cert(fh_in.read())
 
+        assert self.cert, "Cert not set after calling self.set_cert()"
+
         self.public_key = self.cert.public_key()
         self.public_key_pem = crypto.get_public_key_pem(self.public_key)
 
@@ -183,6 +185,8 @@ class Signer:
 
         self.cs_cert_pem = None
 
+        self.timestampers: list[Timestamper] = []
+
         try:
             self.load_key_pair_and_cert()
         except FileNotFoundError:
@@ -250,6 +254,10 @@ class Signer:
 
     def save_key_pair_and_cert(self):
         """Save keypair and cert"""
+        if not self.domain_signing:
+            # pylint: disable=broad-exception-raised
+            raise Exception("Could not load domain signing cert + keys")
+
         log_message("Saving: " + str(self.rootpath / "private-key.pem"))
         with open(self.rootpath / "private-key.pem", "wb") as fh_out:
             fh_out.write(
@@ -306,6 +314,10 @@ class Signer:
         self.set_next_update_time(self.domain_signing.cert)
 
     def __call__(self, sign_req):
+        if not self.domain_signing:
+            # pylint: disable=broad-exception-raised
+            raise Exception("Could not load domain signing cert + keys")
+
         signature = crypto.sign(sign_req.hash, self.domain_signing.private_key)
 
         timestamper = random.choice(self.timestampers)
@@ -337,6 +349,10 @@ class Signer:
 
     async def renew_loop(self):
         """sleep and run cert renew process in a loop"""
+        if not self.domain_signing:
+            # pylint: disable=broad-exception-raised
+            raise Exception("Could not load domain signing cert + keys")
+
         self.set_next_update_time(self.domain_signing.cert)
 
         log_message(

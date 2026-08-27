@@ -4,6 +4,8 @@ The upstream library only handles RSA keys in check_timestamp(). This patch adds
 EC key support by detecting the key type and using the correct verify() signature.
 """
 
+import typing
+
 import rfc3161ng
 from cryptography.hazmat.primitives.asymmetric import ec, padding
 
@@ -17,6 +19,8 @@ from cryptography.hazmat.primitives.asymmetric import ec, padding
 _original_check_timestamp = rfc3161ng.check_timestamp
 
 
+# Ignore typing sine we're matching the upstream definition
+@typing.no_type_check
 def _patched_check_timestamp(
     tst: bytes,
     certificate: bytes | None = None,

@@ -3,6 +3,7 @@
 import datetime
 import importlib
 import contextlib
+from typing import BinaryIO, TextIO
 
 import yaml
 import dateutil.parser
@@ -45,7 +46,7 @@ def format_date(date):
 def open_file(filename_or_resource, mode):
     """open file from either package or file system"""
     # pylint: disable=deprecated-method
-    res = None
+    res: TextIO | BinaryIO | None = None
     if filename_or_resource.startswith("pkg://"):
         pkg, resource = filename_or_resource[6:].split("/", 1)
         if "b" in mode:

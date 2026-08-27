@@ -33,6 +33,9 @@ jobs:
       - name: Lint Check
         run: uv run pylint --rcfile=pylint.ini authsign/
 
+      - name: Type Check
+        run: uv run mypy --install-types --non-interactive --check-untyped-defs authsign
+
       - name: run pebble in background
         run: docker run -e PEBBLE_WFE_NONCEREJECT=0 -d --network "host" ghcr.io/letsencrypt/pebble:latest
 
