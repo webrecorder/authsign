@@ -6,7 +6,6 @@ import contextlib
 from typing import BinaryIO, TextIO
 
 import yaml
-from dateutil import parser, tz
 
 # no limit on CA cert validity
 YEARS = datetime.timedelta(weeks=1000)
@@ -27,14 +26,6 @@ def no_older_then(thedate, base, duration):
         return False
 
     return True
-
-
-def parse_date(datestr):
-    """parse date using dateutil"""
-    if isinstance(datestr, datetime.datetime):
-        return datestr
-
-    return parser.parse(datestr).astimezone(tz.tzutc())
 
 
 def format_date(date):

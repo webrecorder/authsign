@@ -24,7 +24,6 @@ dependencies = [
     "pyyaml",
     "acme",
     "pyasn1",
-    "python-dateutil",
     "pydantic",
     "httpx2",
 ]
