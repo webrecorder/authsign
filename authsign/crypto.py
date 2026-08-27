@@ -184,7 +184,7 @@ def validate_cert_chain(cert_pem):
 
 
 def get_pem_from_tst(tst) -> str:
-    """extract the certs from TST token. Must be called with include_tas_certificates=true"""
+    """extract the certs from TST token. Available when RemoteTimestamper created with include_tsa_certificates=true"""
     pem_str = ""
     certs = tst["content"]["certificates"]
 
