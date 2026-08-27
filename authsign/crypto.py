@@ -4,6 +4,8 @@ import base64
 import binascii
 import traceback
 
+import rfc3161ng
+
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 from cryptography.hazmat.primitives import hashes
@@ -38,7 +40,7 @@ def create_csr(domain, private_key):
     return builder.sign(private_key, hashes.SHA256(), backend=default_backend())
 
 
-def get_as_pem(csr_or_cert):
+def get_as_pem(csr_or_cert: x509.CertificateSigningRequest | x509.Certificate):
     """Convert a csr or cert object to PEM"""
     return csr_or_cert.public_bytes(serialization.Encoding.PEM)
 
@@ -183,7 +185,7 @@ def validate_cert_chain(cert_pem):
     return certs
 
 
-def get_pem_from_tst(tst) -> str:
+def get_pem_from_tst(tst: rfc3161ng.TimeStampToken) -> str:
     """extract the certs from TST token. Available when RemoteTimestamper created with include_tsa_certificates=true"""
     pem_str = ""
     certs = tst["content"]["certificates"]
