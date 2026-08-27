@@ -9,6 +9,10 @@ import requests
 
 from fastapi.testclient import TestClient
 
+import urllib3
+
+urllib3.disable_warnings()
+
 CONFIG_WO_CS = os.path.join(os.path.dirname(__file__), "test_config.yaml")
 CONFIG_WITH_CS = os.path.join(os.path.dirname(__file__), "test_config_with_cs.yaml")
 CONFIG_WITH_DIGICERT = os.path.join(

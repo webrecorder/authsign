@@ -11,23 +11,22 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 requires-python = ">=3.9"
 dependencies = [
     "cryptography",
     "rfc3161ng",
     "pem",
-    "fastapi==0.110.1",
+    "fastapi",
     "uvicorn",
     "pyyaml",
     "acme",
     "pyasn1",
     "python-dateutil",
-    "pydantic==2.13.4",
-    "httpx>=0.22.0,<1.0",
-    "h11<0.15,>=0.13",
+    "pydantic",
+    "httpx2",
 ]
 
 [project.urls]
@@ -57,3 +56,4 @@ authsign = "authsign"
 
 [tool.setuptools.package-data]
 authsign = ["log.json"]
+
