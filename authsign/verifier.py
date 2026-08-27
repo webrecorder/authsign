@@ -4,6 +4,7 @@ import base64
 import traceback
 
 import rfc3161ng
+from authsign.patch_rfc3161ng import apply_patch
 
 from authsign.utils import (
     CERT_DURATION,
@@ -17,6 +18,9 @@ from authsign.log import log_assert, log_message, debug_error
 from authsign.model import SignedHash
 
 DEFAULT_TRUSTED_ROOTS = "pkg://authsign.trusted/roots.yaml"
+
+# patch rfc3161ng to be able to handle EC keys
+apply_patch()
 
 
 # ============================================================================
