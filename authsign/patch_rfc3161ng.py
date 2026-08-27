@@ -84,7 +84,7 @@ def apply_patch():
     global _original_check_timestamp
 
     # already patched
-    if _original_check_timestamp:
+    if _original_check_timestamp is not None:
         return
 
     _original_check_timestamp = rfc3161ng.check_timestamp
