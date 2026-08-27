@@ -179,7 +179,7 @@ wheels = [
 
 [[package]]
 name = "authsign"
-version = "0.6.0b1"
+version = "0.6.0b2"
 source = { editable = "." }
 dependencies = [
     { name = "acme", version = "4.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9.2'" },
