@@ -11,20 +11,25 @@ from fastapi.testclient import TestClient
 
 CONFIG_WO_CS = os.path.join(os.path.dirname(__file__), "test_config.yaml")
 CONFIG_WITH_CS = os.path.join(os.path.dirname(__file__), "test_config_with_cs.yaml")
+CONFIG_WITH_DIGICERT = os.path.join(
+    os.path.dirname(__file__), "test_config_digicert.yaml"
+)
 
 TEST_ROOTS = os.path.join(os.path.dirname(__file__), "test_roots.yaml")
 OUT_TEST_ROOTS = os.path.join(os.path.dirname(__file__), "_out_test_roots.yaml")
 
 OUT_DIR_WO_CS = os.path.join(os.path.dirname(__file__), "test-out-wo-cs")
 OUT_DIR_WITH_CS = os.path.join(os.path.dirname(__file__), "test-out-with-cs")
+OUT_DIR_DIGICERT = os.path.join(os.path.dirname(__file__), "test-out-digicert")
 
 config = {
     "without-cs": (CONFIG_WO_CS, OUT_DIR_WO_CS),
     "with-cs": (CONFIG_WITH_CS, OUT_DIR_WITH_CS),
+    "digicert": (CONFIG_WITH_DIGICERT, OUT_DIR_DIGICERT),
 }
 
 
-@pytest.fixture(scope="module", params=["without-cs", "with-cs"])
+@pytest.fixture(scope="module", params=["without-cs", "with-cs", "digicert"])
 def config_file(request):
     return (config[request.param][0], config[request.param][1])
 
@@ -73,7 +78,7 @@ def teardown_module():
     if keep_data:
         return
 
-    paths = [OUT_DIR_WO_CS, OUT_DIR_WITH_CS]
+    paths = [OUT_DIR_WO_CS, OUT_DIR_WITH_CS, OUT_DIR_DIGICERT]
     for out_dir in paths:
         if os.path.exists(out_dir):
             shutil.rmtree(out_dir)

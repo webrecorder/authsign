@@ -17,10 +17,8 @@ signing:
   # rfc3161 timestamp authority cert chain + timestamp urls
   # at least one required, if multiple, one is selected at random
   timestamping:
-    # time server cert chain (cert + ca cert)
-    # pkg:// url to load from python package data
-    - certfile: pkg://authsign.trusted/ts-chain.pem
-      url: http://freetsa.org/tsr  # timeserver URL
+    # FreeTSA
+    - url: http://freetsa.org/tsr
 
 # load test roots
 trusted_roots: ./tests/_out_test_roots.yaml

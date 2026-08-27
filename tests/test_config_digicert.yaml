@@ -3,7 +3,7 @@ signing:
   email: test@webrecorder.net  # email for acme auth (passed to ACME servers, required)
   port: 5002  # local port for acme domain check (should be 80, change if running behind a proxy)
 
-  output: ./tests/test-out-wo-cs/  # dir to store the keys and certs (for internal use)
+  output: ./tests/test-out-digicert/  # dir to store the keys and certs (for internal use)
 
   staging: "https://localhost:14000/dir"  # generate staging certs
 
@@ -12,9 +12,8 @@ signing:
   # rfc3161 timestamp authority timestamp urls
   # at least one required, if multiple, one is selected at random
   timestamping:
-    # FreeTSA
-    - url: http://freetsa.org/tsr
-
+    # DigiCert (recommended)
+    - url: http://timestamp.digicert.com
 
 # load test roots
 trusted_roots: ./tests/_out_test_roots.yaml
