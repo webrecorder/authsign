@@ -28,8 +28,8 @@ import pem
 
 from authsign.log import debug_error
 
-PublicKey = ec.EllipticCurvePublicKey
-PrivateKey = ec.EllipticCurvePrivateKey
+ECPublicKey = ec.EllipticCurvePublicKey
+ECPrivateKey = ec.EllipticCurvePrivateKey
 Certificate = x509.Certificate
 CSR = x509.CertificateSigningRequest
 
@@ -149,10 +149,10 @@ def sign(data: str, private_key: ec.EllipticCurvePrivateKey) -> str:
 
 def verify(data: str, signature: str, public_key: PublicKeyTypes) -> bool:
     """Verify signature (base64-encoded DER) with public key"""
-    assert isinstance(public_key, ec.EllipticCurvePublicKey)
-    sig_bytes = base64.b64decode(signature)
-    data_str = data.encode("ascii")
     try:
+        assert isinstance(public_key, ec.EllipticCurvePublicKey)
+        sig_bytes = base64.b64decode(signature)
+        data_str = data.encode("ascii")
         public_key.verify(sig_bytes, data_str, ec.ECDSA(hashes.SHA256()))
         return True
     except Exception:

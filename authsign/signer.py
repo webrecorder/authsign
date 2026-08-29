@@ -73,8 +73,8 @@ class Timestamper:
 class CertKeyPair:
     """Loads a cert + private key from PEM, extracts public key from cert"""
 
-    private_key: crypto.PrivateKey
-    public_key: crypto.PublicKey
+    private_key: crypto.ECPrivateKey
+    public_key: crypto.ECPublicKey
 
     public_key_pem: bytes
 
@@ -83,8 +83,8 @@ class CertKeyPair:
 
     def __init__(
         self,
-        private_key: crypto.PrivateKey,
-        public_key: crypto.PublicKey,
+        private_key: crypto.ECPrivateKey,
+        public_key: crypto.ECPublicKey,
         public_key_pem: bytes,
         cert_pem: bytes,
         cert: crypto.Certificate,
@@ -115,9 +115,8 @@ class CertKeyPair:
 
         public_key = cert.public_key()
         assert isinstance(
-            public_key, crypto.PublicKey
-        ), "Only ECDSA public key supported"
-        # self.public_key = public_key
+            public_key, crypto.ECPublicKey
+        ), "Only EC public key supported"
         public_key_pem = crypto.get_public_key_pem(public_key)
 
         log_message(
@@ -127,9 +126,8 @@ class CertKeyPair:
             data = fh_in.read()
             private_key = crypto.load_private_key(data, passphrase)
             assert isinstance(
-                private_key, crypto.PrivateKey
-            ), "Only ECDSA private keys supported"
-            # self.private_key = private_key
+                private_key, crypto.ECPrivateKey
+            ), "Only EC private keys supported"
 
         key_pair = cls(private_key, public_key, public_key_pem, cert_pem, cert)
 
