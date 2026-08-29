@@ -15,7 +15,7 @@ from authsign.utils import (
 )
 from authsign import crypto
 from authsign.log import log_assert, log_message, debug_error
-from authsign.model import SignedHash
+from authsign.model import SignedHash, SignReq
 
 DEFAULT_TRUSTED_ROOTS = "pkg://authsign.trusted/roots.yaml"
 
@@ -72,7 +72,7 @@ class Verifier:
             f"Trusted {name} Root Cert (sha-256 fingerprint: {fingerprint})",
         )
 
-    def __call__(self, signed_req):
+    def __call__(self, signed_req: SignedHash):
         """Verify signed hash request"""
 
         if isinstance(signed_req, dict):

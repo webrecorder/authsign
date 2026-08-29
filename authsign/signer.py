@@ -43,7 +43,9 @@ apply_patch()
 class Timestamper:
     """handle rfc3161 timestamp signing"""
 
-    def __init__(self, url=None, **_kwargs):
+    _timestamper: rfc3161ng.RemoteTimestamper
+
+    def __init__(self, url: str, **_kwargs):
         # passing include_tsa_certificate=True ensures the server returns the
         # cert chain, instead of passing one in.
         # certificate=b"" is necessary to avoid exception due to empty cert, see:
@@ -52,9 +54,9 @@ class Timestamper:
             url, certificate=b"", hashname="sha256", include_tsa_certificate=True
         )
 
-    def __call__(self, text):
+    def __call__(self, signature: str) -> tuple[bytes, datetime.datetime, str]:
         """perform signing op"""
-        tsr = self._timestamper(data=text.encode("ascii"), return_tsr=True)
+        tsr = self._timestamper(data=signature.encode("ascii"), return_tsr=True)
 
         tst = tsr.time_stamp_token
 
@@ -70,18 +72,22 @@ class Timestamper:
 class CertKeyPair:
     """Loads a cert + private key from PEM, extracts public key from cert"""
 
-    def __init__(self):
-        self.cert_pem = None
-        self.cert = None
+    private_key: crypto.PrivateKey | None = None
+    public_key: crypto.PublicKey | None = None
 
-        self.public_key = None
-        self.public_key_pem = None
+    public_key_pem: str | None = None
 
-        self.private_key = None
+    cert_pem: str | None = None
+    cert: crypto.Certificate | None = None
 
     def load(
-        self, name, certfile, private_key, passphrase=PASSPHRASE, duration=CERT_DURATION
-    ):
+        self,
+        name: Path | str,
+        certfile: Path | str,
+        private_key_filename: Path | str,
+        passphrase=PASSPHRASE,
+        duration=CERT_DURATION,
+    ) -> CertKeyPair:
         """load existing keypair and certs from file system. load public key from cert"""
 
         log_message("{0}: Loading Cert: {1}".format(name, str(certfile)))
@@ -90,13 +96,23 @@ class CertKeyPair:
 
         assert self.cert, "Cert not set after calling self.set_cert()"
 
-        self.public_key = self.cert.public_key()
+        public_key = self.cert.public_key()
+        assert isinstance(
+            public_key, crypto.PublicKey
+        ), "Only ECDSA public key supported"
+        self.public_key = public_key
         self.public_key_pem = crypto.get_public_key_pem(self.public_key)
 
-        log_message("{0}: Loading Private Key: {1}".format(name, str(private_key)))
-        with open(private_key, "rb") as fh_in:
+        log_message(
+            "{0}: Loading Private Key: {1}".format(name, str(private_key_filename))
+        )
+        with open(private_key_filename, "rb") as fh_in:
             data = fh_in.read()
-            self.private_key = crypto.load_private_key(data, passphrase)
+            private_key = crypto.load_private_key(data, passphrase)
+            assert isinstance(
+                private_key, crypto.PrivateKey
+            ), "Only ECDSA private keys supported"
+            self.private_key = private_key
 
         now = datetime.datetime.now(datetime.UTC)
 
@@ -128,9 +144,11 @@ class CertKeyPair:
             cert_pem = cert_pem.encode("ascii")
         self.cert = crypto.load_cert(cert_pem)
 
-    def test_keys(self, data):
+    def test_keys(self, data: str):
         """Test key pair sign/verify to ensure its valid"""
+        assert self.private_key, "Private Key missing"
         signature = crypto.sign(data, self.private_key)
+        assert self.public_key, "Public Key missing"
         return crypto.verify(data, signature, self.public_key)
 
 
@@ -138,6 +156,8 @@ class CertKeyPair:
 # pylint: disable=too-many-arguments
 class Signer:
     """Signing cert, private, public key generator"""
+
+    csca_signing: CertKeyPair | None = None
 
     def __init__(
         self,
@@ -304,6 +324,8 @@ class Signer:
             return
 
         if self.csca_signing:
+            assert self.csca_signing.cert
+            assert self.csca_signing.private_key
             now = datetime.datetime.now(datetime.UTC)
 
             cs_cert = crypto.create_signed_cert(
