@@ -3,6 +3,7 @@ Use ACME protocol to obtain a cert!
 """
 
 from contextlib import contextmanager
+from collections.abc import Generator
 
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
@@ -100,7 +101,7 @@ class AcmeSigner:
     @contextmanager
     def challenge_server(
         self, http_01_resources: set[standalone.HTTP01RequestHandler.HTTP01Resource]
-    ):
+    ) -> Generator[standalone.HTTP01DualNetworkedServers, None]:
         """Manage standalone server set up and shutdown."""
 
         servers = None

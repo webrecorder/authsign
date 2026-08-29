@@ -6,11 +6,12 @@ import datetime
 import traceback
 
 from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator
 from fastapi import FastAPI, HTTPException, Header
 
 from authsign.signer import Signer
 from authsign.verifier import Verifier
-from authsign.model import SignedHash, SignReq
+from authsign.model import SignedHash, SignReq, VerifiedResponse
 
 from authsign.utils import load_yaml, CERT_DURATION, STAMP_DURATION
 
@@ -21,7 +22,7 @@ verifier: Verifier | None = None
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     """load certs before starting FastAPI app"""
     await load_certs()
     yield
@@ -30,7 +31,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-async def load_certs():
+async def load_certs() -> None:
     """load existing certs or request new ones if expired don't exist"""
     configfile = os.environ.get("CONFIG", "config.yaml")
 
@@ -55,12 +56,12 @@ async def load_certs():
         config["signing"]["auth_token"] = os.environ.get("AUTH_TOKEN")
 
     if "cert_duration" in config:
-        cert_duration = datetime.timedelta(**config.get("cert_duration"))
+        cert_duration = datetime.timedelta(**config.get("cert_duration", {}))
     else:
         cert_duration = CERT_DURATION
 
     if "stamp_duration" in config:
-        stamp_duration = datetime.timedelta(**config.get("stamp_duration"))
+        stamp_duration = datetime.timedelta(**config.get("stamp_duration", {}))
     else:
         stamp_duration = STAMP_DURATION
 
@@ -84,7 +85,7 @@ async def load_certs():
 
 
 @app.post("/sign", response_model=SignedHash, response_model_exclude_none=True)
-async def sign_data(sign_req: SignReq, authorization: str = Header(None)):
+async def sign_data(sign_req: SignReq, authorization: str = Header(None)) -> SignedHash:
     """sign data api"""
     if not signer:
         raise ValueError("No signer defined!")
@@ -103,8 +104,8 @@ async def sign_data(sign_req: SignReq, authorization: str = Header(None)):
         raise HTTPException(status_code=400, detail=detail) from e
 
 
-@app.post("/verify")
-async def verify_data(signed_hash: SignedHash):
+@app.post("/verify", response_model=VerifiedResponse)
+async def verify_data(signed_hash: SignedHash) -> VerifiedResponse:
     """verify data api"""
     if not verifier:
         raise ValueError("No verifier defined!")
@@ -112,11 +113,7 @@ async def verify_data(signed_hash: SignedHash):
     log_message("Verifying Signed Request...")
 
     try:
-        result = verifier(signed_hash)
-        if result:
-            return result
+        return verifier(signed_hash)
     except Exception:
         # not adding details for security
-        pass
-
-    raise HTTPException(status_code=400, detail="Not verified")
+        raise HTTPException(status_code=400, detail="Not verified")

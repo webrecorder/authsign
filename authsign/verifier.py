@@ -4,8 +4,6 @@ import base64
 import traceback
 import datetime
 
-from typing import TypedDict
-
 import rfc3161ng
 from authsign.patch_rfc3161ng import apply_patch
 
@@ -18,18 +16,12 @@ from authsign.utils import (
 )
 from authsign import crypto
 from authsign.log import log_assert, log_message, debug_error
-from authsign.model import SignedHash
+from authsign.model import SignedHash, VerifiedResponse
 
 DEFAULT_TRUSTED_ROOTS = "pkg://authsign.trusted/roots.yaml"
 
 # patch rfc3161ng to be able to handle EC keys
 apply_patch()
-
-
-# ============================================================================
-class VerifiedResponse(TypedDict):
-    observer: str
-    timestamp: str
 
 
 # ============================================================================
@@ -94,7 +86,7 @@ class Verifier:
             f"Trusted {name} Root Cert (sha-256 fingerprint: {fingerprint})",
         )
 
-    def __call__(self, signed_req: SignedHash | dict) -> VerifiedResponse | None:
+    def __call__(self, signed_req: SignedHash | dict) -> VerifiedResponse:
         """Verify signed hash request"""
 
         if isinstance(signed_req, dict):
@@ -151,7 +143,7 @@ class Verifier:
                 signed_req.signature, signed_req.timeSignature, signed_req.timestampCert
             )
 
-            log_assert(
+            timestamp = log_assert(
                 timestamp,
                 "Verify timeSignature is a valid timestamp signature of\
  hash signature with timestamp certificate",
@@ -174,8 +166,8 @@ class Verifier:
                 timestamp_certs[-1], self.timestamp_cert_roots, "Timestamp"
             )
 
-            return {"observer": domain, "timestamp": format_date(timestamp)}
+            return VerifiedResponse(observer=domain, timestamp=format_date(timestamp))
 
-        except Exception:
+        except Exception as e:
             debug_error(traceback.format_exc())
-            return None
+            raise e
