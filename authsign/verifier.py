@@ -15,7 +15,7 @@ from authsign.utils import (
 )
 from authsign import crypto
 from authsign.log import log_assert, log_message, debug_error
-from authsign.model import SignedHash, SignReq
+from authsign.model import SignedHash
 
 DEFAULT_TRUSTED_ROOTS = "pkg://authsign.trusted/roots.yaml"
 

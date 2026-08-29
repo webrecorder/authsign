@@ -20,7 +20,7 @@ from cryptography.hazmat.primitives.asymmetric.types import (
 from cryptography.hazmat.backends import default_backend
 
 from cryptography import x509
-from cryptography.x509.oid import NameOID, ExtensionOID
+from cryptography.x509.oid import NameOID
 
 from pyasn1.codec.der import encoder
 
@@ -31,6 +31,7 @@ from authsign.log import debug_error
 PublicKey = ec.EllipticCurvePublicKey
 PrivateKey = ec.EllipticCurvePrivateKey
 Certificate = x509.Certificate
+CSR = x509.CertificateSigningRequest
 
 
 def create_ecdsa_private_key() -> ec.EllipticCurvePrivateKey:
@@ -109,12 +110,12 @@ def get_fingerprint(cert: x509.Certificate) -> str:
     return binascii.b2a_hex(cert.fingerprint(hashes.SHA256())).decode("ascii")
 
 
-def get_public_key_pem(public_key: CertificatePublicKeyTypes) -> str:
+def get_public_key_pem(public_key: CertificatePublicKeyTypes) -> bytes:
     """Get PEM for public key"""
     return public_key.public_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
-    ).decode("ascii")
+    )
 
 
 def save_private_key(

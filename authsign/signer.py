@@ -9,6 +9,7 @@ import base64
 import random
 import asyncio
 import traceback
+from typing import Self
 
 from pyasn1.codec.der import encoder
 
@@ -20,7 +21,7 @@ from authsign import crypto, __version__
 
 from authsign.acme_signer import AcmeSigner
 
-from authsign.model import SignedHash
+from authsign.model import SignedHash, SignReq
 from authsign.utils import (
     CERT_DURATION,
     STAMP_DURATION,
@@ -72,36 +73,52 @@ class Timestamper:
 class CertKeyPair:
     """Loads a cert + private key from PEM, extracts public key from cert"""
 
-    private_key: crypto.PrivateKey | None = None
-    public_key: crypto.PublicKey | None = None
+    private_key: crypto.PrivateKey
+    public_key: crypto.PublicKey
 
-    public_key_pem: str | None = None
+    public_key_pem: bytes
 
-    cert_pem: str | None = None
-    cert: crypto.Certificate | None = None
+    cert_pem: bytes
+    cert: crypto.Certificate
 
-    def load(
+    def __init__(
         self,
+        private_key: crypto.PrivateKey,
+        public_key: crypto.PublicKey,
+        public_key_pem: bytes,
+        cert_pem: bytes,
+        cert: crypto.Certificate,
+    ):
+        self.private_key = private_key
+        self.public_key = public_key
+
+        self.public_key_pem = public_key_pem
+
+        self.cert_pem = cert_pem
+        self.cert = cert
+
+    @classmethod
+    def load(
+        cls,
         name: Path | str,
         certfile: Path | str,
         private_key_filename: Path | str,
         passphrase=PASSPHRASE,
         duration=CERT_DURATION,
-    ) -> CertKeyPair:
+    ) -> Self:
         """load existing keypair and certs from file system. load public key from cert"""
 
         log_message("{0}: Loading Cert: {1}".format(name, str(certfile)))
         with open(certfile, "rb") as fh_in:
-            self.set_cert(fh_in.read())
+            cert_pem = fh_in.read()
+            cert = crypto.load_cert(cert_pem)
 
-        assert self.cert, "Cert not set after calling self.set_cert()"
-
-        public_key = self.cert.public_key()
+        public_key = cert.public_key()
         assert isinstance(
             public_key, crypto.PublicKey
         ), "Only ECDSA public key supported"
-        self.public_key = public_key
-        self.public_key_pem = crypto.get_public_key_pem(self.public_key)
+        # self.public_key = public_key
+        public_key_pem = crypto.get_public_key_pem(public_key)
 
         log_message(
             "{0}: Loading Private Key: {1}".format(name, str(private_key_filename))
@@ -112,11 +129,40 @@ class CertKeyPair:
             assert isinstance(
                 private_key, crypto.PrivateKey
             ), "Only ECDSA private keys supported"
-            self.private_key = private_key
+            # self.private_key = private_key
+
+        key_pair = cls(private_key, public_key, public_key_pem, cert_pem, cert)
+
+        key_pair.test_keys(duration)
+
+        return key_pair
+
+    @classmethod
+    def init_new(cls, domain: str, signer: AcmeSigner) -> tuple[Self, crypto.CSR]:
+        """init new key pair for signing"""
+        private_key = crypto.create_ecdsa_private_key()
+        public_key = private_key.public_key()
+        public_key_pem = crypto.get_public_key_pem(public_key)
+
+        csr = crypto.create_csr(domain, private_key)
+        csr_pem = crypto.get_as_pem(csr)
+
+        cert_pem = signer.get_acme_cert(csr_pem)
+        cert = crypto.load_cert(cert_pem)
+
+        return cls(private_key, public_key, public_key_pem, cert_pem, cert), csr
+
+    def test_keys(
+        self, duration: datetime.timedelta, data="Data Signature Test"
+    ) -> None:
+        """Test key pair sign/verify to ensure its valid"""
+        signature = crypto.sign(data, self.private_key)
+
+        log_assert(
+            crypto.verify(data, signature, self.public_key), "Validating key pair"
+        )
 
         now = datetime.datetime.now(datetime.UTC)
-
-        log_assert(self.test_keys("Data Signature Test"), "Validating key pair")
 
         log_assert(
             self.cert.not_valid_before_utc
@@ -126,52 +172,46 @@ class CertKeyPair:
             "Validating cert still valid",
         )
 
-        return self
-
-    def init_new(self):
-        """init new key pair for signing"""
-        self.private_key = crypto.create_ecdsa_private_key()
-
-        self.public_key = self.private_key.public_key()
-        self.public_key_pem = crypto.get_public_key_pem(self.public_key)
-
-        return self
-
-    def set_cert(self, cert_pem):
-        """init cert via pem"""
-        self.cert_pem = cert_pem
-        if isinstance(cert_pem, str):
-            cert_pem = cert_pem.encode("ascii")
-        self.cert = crypto.load_cert(cert_pem)
-
-    def test_keys(self, data: str):
-        """Test key pair sign/verify to ensure its valid"""
-        assert self.private_key, "Private Key missing"
-        signature = crypto.sign(data, self.private_key)
-        assert self.public_key, "Public Key missing"
-        return crypto.verify(data, signature, self.public_key)
-
 
 # ============================================================================
 # pylint: disable=too-many-arguments
 class Signer:
     """Signing cert, private, public key generator"""
 
+    domain: str
+    email: str
+    port: int
+    staging: bool
+
+    rootpath: Path
+
+    timestampers: list[Timestamper] = []
+
+    auth_token: str | None
+
+    domain_signing: CertKeyPair
+
     csca_signing: CertKeyPair | None = None
+    cs_cert_pem: bytes | None = None
+
+    cert_duration: datetime.timedelta
+    stamp_duration: datetime.timedelta
+
+    next_update: float = 0
 
     def __init__(
         self,
-        domain=None,
-        email=None,
-        port=None,
-        staging=True,
-        output=None,
+        domain: str,
+        email: str,
+        port: int,
+        staging: bool = True,
+        output: str | None = None,
         timestamping=None,
-        auth_token=None,
-        csca_cert=None,
-        csca_private_key=None,
-        cert_duration=None,
-        stamp_duration=None,
+        auth_token: str | None = None,
+        csca_cert: str | None = None,
+        csca_private_key: str | None = None,
+        cert_duration: datetime.timedelta | None = None,
+        stamp_duration: datetime.timedelta | None = None,
     ):
         self.domain = domain
         self.email = email
@@ -192,7 +232,7 @@ class Signer:
         self.stamp_duration = stamp_duration or STAMP_DURATION
 
         if csca_cert and csca_private_key:
-            self.csca_signing = CertKeyPair().load(
+            self.csca_signing = CertKeyPair.load(
                 "Cross-Signing",
                 csca_cert,
                 csca_private_key,
@@ -201,14 +241,6 @@ class Signer:
             )
         else:
             self.csca_signing = None
-
-        self.next_update = 0
-
-        self.domain_signing = None
-
-        self.cs_cert_pem = None
-
-        self.timestampers: list[Timestamper] = []
 
         try:
             self.load_key_pair_and_cert()
@@ -223,10 +255,6 @@ class Signer:
             )
             self.update_signing_key_and_cert()
 
-        if not self.domain_signing:
-            # pylint: disable=broad-exception-raised
-            raise Exception("Could not load domain signing cert + keys")
-
         self.timestampers = [Timestamper(**ts_data) for ts_data in timestamping]
 
     def validate_token(self, auth_header):
@@ -239,10 +267,10 @@ class Signer:
 
         return auth_header.split(" ")[1] == self.auth_token
 
-    def load_key_pair_and_cert(self):
+    def load_key_pair_and_cert(self) -> None:
         """Load key pair and cert"""
 
-        self.domain_signing = CertKeyPair().load(
+        self.domain_signing = CertKeyPair.load(
             "Domain Auth",
             self.rootpath / "cert.pem",
             self.rootpath / "private-key.pem",
@@ -250,7 +278,7 @@ class Signer:
         )
 
         if self.csca_signing:
-            cross_signing = CertKeyPair().load(
+            cross_signing = CertKeyPair.load(
                 "Cross-Signing Cert",
                 self.rootpath / "cs-cert.pem",
                 self.rootpath / "private-key.pem",
@@ -264,24 +292,21 @@ class Signer:
                 "Cross-Signing Cert Public Key == Domain Cert Public Key",
             )
 
-    def set_next_update_time(self, cert):
+    def set_next_update_time(self, cert: crypto.Certificate) -> None:
         """store the time for next cert renew"""
-        next_update = cert.not_valid_before_utc + self.cert_duration
+        next_update_dt = cert.not_valid_before_utc + self.cert_duration
         log_message(
             "Certificate will be used from {0} to {1}".format(
-                cert.not_valid_before_utc, next_update
+                cert.not_valid_before_utc, next_update_dt
             )
         )
         next_update = (
-            next_update - datetime.datetime.now(datetime.UTC)
+            next_update_dt - datetime.datetime.now(datetime.UTC)
         ).total_seconds()
         self.next_update = next_update
 
-    def save_key_pair_and_cert(self):
+    def save_key_pair_and_cert(self) -> None:
         """Save keypair and cert"""
-        if not self.domain_signing:
-            # pylint: disable=broad-exception-raised
-            raise Exception("Could not load domain signing cert + keys")
 
         log_message("Saving: " + str(self.rootpath / "private-key.pem"))
         with open(self.rootpath / "private-key.pem", "wb") as fh_out:
@@ -290,7 +315,7 @@ class Signer:
             )
 
         log_message("Saving: " + str(self.rootpath / "cert.pem"))
-        with open(self.rootpath / "cert.pem", "wt") as fh_out:
+        with open(self.rootpath / "cert.pem", "wb") as fh_out:
             fh_out.write(self.domain_signing.cert_pem)
 
         if self.cs_cert_pem:
@@ -298,34 +323,28 @@ class Signer:
             with open(self.rootpath / "cs-cert.pem", "wb") as fh_out:
                 fh_out.write(self.cs_cert_pem)
 
-    def update_signing_key_and_cert(self):
+    def update_signing_key_and_cert(self) -> None:
         """Run cert creation"""
 
-        self.domain_signing = CertKeyPair().init_new()
-
-        csr = crypto.create_csr(self.domain, self.domain_signing.private_key)
-        csr_pem = crypto.get_as_pem(csr)
+        signer = AcmeSigner(self.domain, self.email, self.port, self.staging)
 
         log_message("Awaiting new cert for domain: " + self.domain)
 
         log_message(f"Staging?: {self.staging}")
 
-        signer = AcmeSigner(self.domain, self.email, self.port, self.staging)
+        csr: crypto.CSR | None = None
 
         try:
-            self.domain_signing.set_cert(signer.get_acme_cert(csr_pem))
+            self.domain_signing, csr = CertKeyPair.init_new(self.domain, signer)
 
             log_success("Obtained new domain cert for: " + self.domain)
         except Exception as e:
             log_failure("Unable to retrieve cert for: " + self.domain)
             log_failure("Reason: " + repr(e))
             log_failure(traceback.format_exc())
-            self.domain_signing = None
-            return
+            raise e
 
         if self.csca_signing:
-            assert self.csca_signing.cert
-            assert self.csca_signing.private_key
             now = datetime.datetime.now(datetime.UTC)
 
             cs_cert = crypto.create_signed_cert(
@@ -340,7 +359,7 @@ class Signer:
         self.save_key_pair_and_cert()
         self.set_next_update_time(self.domain_signing.cert)
 
-    def __call__(self, sign_req):
+    def __call__(self, sign_req: SignReq) -> SignedHash:
         if not self.domain_signing:
             # pylint: disable=broad-exception-raised
             raise Exception("Could not load domain signing cert + keys")
@@ -374,9 +393,9 @@ class Signer:
             crossSignedCert=self.cs_cert_pem,
         )
 
-    async def renew_loop(self):
+    async def renew_loop(self) -> None:
         """sleep and run cert renew process in a loop"""
-        if not self.domain_signing:
+        if not self.domain_signing or not self.domain_signing.cert:
             # pylint: disable=broad-exception-raised
             raise Exception("Could not load domain signing cert + keys")
 
