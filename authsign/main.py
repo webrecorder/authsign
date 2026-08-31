@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 from fastapi import FastAPI, HTTPException, Header
 
+from authsign import __version__
 from authsign.signer import Signer
 from authsign.verifier import Verifier
 from authsign.model import SignedHash, SignReq, VerifiedResponse
@@ -33,6 +34,9 @@ app = FastAPI(lifespan=lifespan)
 
 async def load_certs() -> None:
     """load existing certs or request new ones if expired don't exist"""
+    log_message("Starting Webrecorder authsign: " + __version__)
+    log_message("")
+
     configfile = os.environ.get("CONFIG", "config.yaml")
 
     global signer

@@ -1,3 +1,4 @@
 """authsign package"""
+from importlib.metadata import version
 
-__version__ = "0.6.0b2"
+__version__ = version("authsign")
