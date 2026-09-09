@@ -1,6 +1,6 @@
 [project]
 name = "authsign"
-version = "0.6.0b2"
+version = "0.6.0"
 description = "Authenticating Data Signing + Verification Server"
 readme = "README.md"
 authors = [
@@ -13,8 +13,9 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = [
     "cryptography",
     "rfc3161ng",
