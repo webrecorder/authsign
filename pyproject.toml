@@ -56,4 +56,5 @@ authsign = "authsign"
 
 [tool.setuptools.package-data]
 authsign = ["log.json"]
+"authsign.trusted" = ["*"]
 
