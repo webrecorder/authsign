@@ -101,7 +101,7 @@ class AcmeSigner:
     @contextmanager
     def challenge_server(
         self, http_01_resources: set[standalone.HTTP01RequestHandler.HTTP01Resource]
-    ) -> Generator[standalone.HTTP01DualNetworkedServers, None]:
+    ) -> Generator[standalone.HTTP01DualNetworkedServers]:
         """Manage standalone server set up and shutdown."""
 
         servers = None

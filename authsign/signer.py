@@ -9,7 +9,7 @@ import base64
 import random
 import asyncio
 import traceback
-from typing import Self
+from typing import Self, TypedDict
 
 from pyasn1.codec.der import encoder
 
@@ -37,6 +37,12 @@ renewing = False
 
 # patch rfc3161ng to be able to handle EC keys
 apply_patch()
+
+
+# ============================================================================
+class TimestampingServers(TypedDict):
+    """ timestamping server """
+    url: str
 
 
 # ============================================================================
@@ -204,7 +210,7 @@ class Signer:
         port: int,
         staging: bool = True,
         output: str | None = None,
-        timestamping=None,
+        timestamping: list[TimestampingServers] | None = None,
         auth_token: str | None = None,
         csca_cert: str | None = None,
         csca_private_key: str | None = None,
@@ -253,7 +259,8 @@ class Signer:
             )
             self.update_signing_key_and_cert()
 
-        self.timestampers = [Timestamper(**ts_data) for ts_data in timestamping]
+        if timestamping:
+            self.timestampers = [Timestamper(**ts_data) for ts_data in timestamping]
 
     def validate_token(self, auth_header):
         """validate the passed in auth header token"""

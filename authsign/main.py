@@ -22,7 +22,7 @@ verifier: Verifier | None = None
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     """load certs before starting FastAPI app"""
     await load_certs()
     yield

@@ -37,7 +37,7 @@ def format_date(date: datetime.datetime) -> str:
 
 
 @contextlib.contextmanager
-def open_file(filename_or_resource: str) -> Generator[TextIO, None]:
+def open_file(filename_or_resource: str) -> Generator[TextIO]:
     """open text file from either package or file system"""
     if filename_or_resource.startswith("pkg://"):
         pkg, resource = filename_or_resource[6:].split("/", 1)
