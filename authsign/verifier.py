@@ -2,6 +2,7 @@
 
 import base64
 import traceback
+import datetime
 
 import rfc3161ng
 from authsign.patch_rfc3161ng import apply_patch
@@ -15,7 +16,7 @@ from authsign.utils import (
 )
 from authsign import crypto
 from authsign.log import log_assert, log_message, debug_error
-from authsign.model import SignedHash
+from authsign.model import SignedHash, VerifiedResponse
 
 DEFAULT_TRUSTED_ROOTS = "pkg://authsign.trusted/roots.yaml"
 
@@ -27,8 +28,17 @@ apply_patch()
 class Verifier:
     """Verifies signed response from signer to check for validity"""
 
+    domain_cert_roots: list[str]
+    timestamp_cert_roots: list[str]
+
+    cert_duration: datetime.timedelta
+    stamp_duration: datetime.timedelta
+
     def __init__(
-        self, trusted_roots_filename=None, cert_duration=None, stamp_duration=None
+        self,
+        trusted_roots_filename: str | None = None,
+        cert_duration: datetime.timedelta | None = None,
+        stamp_duration: datetime.timedelta | None = None,
     ):
         trusted_roots_filename = trusted_roots_filename or DEFAULT_TRUSTED_ROOTS
         log_message("Loading trusted roots from: " + trusted_roots_filename)
@@ -43,7 +53,9 @@ class Verifier:
         log_message(f"{len(self.domain_cert_roots)} Domain Cert Root(s) Loaded")
         log_message(f"{len(self.timestamp_cert_roots)} Timestamp Cert Root(s) Loaded")
 
-    def timestamp_verify(self, text, signature, cert_pem):
+    def timestamp_verify(
+        self, text: str, signature: str, cert_pem: str
+    ) -> datetime.datetime | None:
         """Verify RFC 3161 timestamp given a cert, signature and text
         Return the timestamp"""
         resp = rfc3161ng.decode_timestamp_response(base64.b64decode(signature))
@@ -63,7 +75,9 @@ class Verifier:
 
         return rfc3161ng.get_timestamp(tst, naive=False)
 
-    def check_fingerprint(self, cert, trusted, name):
+    def check_fingerprint(
+        self, cert: crypto.Certificate, trusted: list[str], name: str
+    ) -> None:
         """Check if cert fingerprint matches one of trusted fingerprints (sha-256 hashes)"""
         fingerprint = crypto.get_fingerprint(cert)
 
@@ -72,7 +86,7 @@ class Verifier:
             f"Trusted {name} Root Cert (sha-256 fingerprint: {fingerprint})",
         )
 
-    def __call__(self, signed_req):
+    def __call__(self, signed_req: SignedHash | dict) -> VerifiedResponse:
         """Verify signed hash request"""
 
         if isinstance(signed_req, dict):
@@ -129,7 +143,7 @@ class Verifier:
                 signed_req.signature, signed_req.timeSignature, signed_req.timestampCert
             )
 
-            log_assert(
+            timestamp = log_assert(
                 timestamp,
                 "Verify timeSignature is a valid timestamp signature of\
  hash signature with timestamp certificate",
@@ -152,8 +166,8 @@ class Verifier:
                 timestamp_certs[-1], self.timestamp_cert_roots, "Timestamp"
             )
 
-            return {"observer": domain, "timestamp": format_date(timestamp)}
+            return VerifiedResponse(observer=domain, timestamp=format_date(timestamp))
 
-        except Exception:
+        except Exception as e:
             debug_error(traceback.format_exc())
-            return None
+            raise e

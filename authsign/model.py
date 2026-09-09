@@ -13,7 +13,9 @@ class SignReq(BaseModel):
 
 
 class SignedHash(SignReq):
-    """Signed Hash of the SignReq, created by signer, ready for verification"""
+    """Signed Hash of the SignReq, created by signer, ready for verification
+    Response from /sign endpoint
+    """
 
     version: str = "0.1.0"
 
@@ -26,3 +28,10 @@ class SignedHash(SignReq):
 
     timeSignature: str
     timestampCert: str
+
+
+class VerifiedResponse(BaseModel):
+    """Response from /verify endpoint"""
+
+    observer: str
+    timestamp: str

@@ -3,6 +3,7 @@ Use ACME protocol to obtain a cert!
 """
 
 from contextlib import contextmanager
+from collections.abc import Generator
 
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
@@ -23,7 +24,15 @@ ACME_PROD_URL = "https://acme-v02.api.letsencrypt.org/directory"
 class AcmeSigner:
     """Acme Signer"""
 
-    def __init__(self, csr_pem, email, port, staging=True):
+    csr_pem: str
+    email: str
+    port: int
+
+    directory_url: str
+    user_agent: str
+    staging: bool
+
+    def __init__(self, csr_pem: str, email: str, port: int, staging: str | bool = True):
         self.csr_pem = csr_pem
         self.email = email
         self.port = port
@@ -36,13 +45,13 @@ class AcmeSigner:
         self.user_agent = USER_AGENT
         self.staging = bool(staging)
 
-    def create_rsa_key(self):
+    def create_rsa_key(self) -> rsa.RSAPrivateKey:
         """Create RSA Key for ACME auth request"""
         return rsa.generate_private_key(
             public_exponent=65537, key_size=2048, backend=default_backend()
         )
 
-    def get_acme_cert(self, csr_pem):
+    def get_acme_cert(self, csr_pem: bytes) -> bytes:
         """Get a signed cert via ACME"""
         # Register account and accept TOS
         acc_key = jose.jwk.JWKRSA(key=self.create_rsa_key())
@@ -68,9 +77,11 @@ class AcmeSigner:
 
         # The certificate is ready to be used in the variable "fullchain_pem".
         result = self.perform_http01(client_acme, challb, orderr)
-        return result.fullchain_pem
+        return result.fullchain_pem.encode("ascii")
 
-    def select_http01_chall(self, orderr):
+    def select_http01_chall(
+        self, orderr: messages.OrderResource
+    ) -> messages.ChallengeBody:
         """Extract authorization resource from within order resource."""
         # Authorization Resource: authz.
         # This object holds the offered challenges by the server and their status.
@@ -88,7 +99,9 @@ class AcmeSigner:
         raise Exception("HTTP-01 challenge was not offered by the CA server.")
 
     @contextmanager
-    def challenge_server(self, http_01_resources):
+    def challenge_server(
+        self, http_01_resources: set[standalone.HTTP01RequestHandler.HTTP01Resource]
+    ) -> Generator[standalone.HTTP01DualNetworkedServers]:
         """Manage standalone server set up and shutdown."""
 
         servers = None
@@ -104,7 +117,12 @@ class AcmeSigner:
             if servers:
                 servers.shutdown_and_server_close()
 
-    def perform_http01(self, client_acme, challb, orderr):
+    def perform_http01(
+        self,
+        client_acme: client.ClientV2,
+        challb: messages.ChallengeBody,
+        orderr: messages.OrderResource,
+    ) -> messages.OrderResource:
         """Set up standalone webserver and perform HTTP-01 challenge."""
 
         response, validation = challb.response_and_validation(client_acme.net.key)
