@@ -41,7 +41,8 @@ apply_patch()
 
 # ============================================================================
 class TimestampingServers(TypedDict):
-    """ timestamping server """
+    """timestamping server"""
+
     url: str
 
 
